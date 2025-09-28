@@ -1,8 +1,3 @@
----
-layout: default
-title: Resume
----
-
 # Diego Pablo Barros Araya
 
 Senior IT Engineer & Technical Consultant | Atlassian Certified Expert (ACP-EE) | ITIL v4 | Python | Docker | Git | Open-Source Advocate

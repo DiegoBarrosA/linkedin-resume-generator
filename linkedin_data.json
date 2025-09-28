@@ -1,0 +1,41 @@
+{
+  "name": "Diego Pablo Barros Araya",
+  "headline": "Senior IT Engineer & Technical Consultant | Atlassian Certified Expert (ACP-EE) | ITIL v4 | Python | Docker | Git | Open-Source Advocate",
+  "location": "Santiago, Santiago Metropolitan Region, Chile",
+  "about": "",
+  "experience": [
+    {
+      "title": "ServiceRocket",
+      "company": "2 yrs 9 mos",
+      "duration": "Santiago, Santiago Metropolitan Region, Chile · Remote",
+      "description": ""
+    },
+    {
+      "title": "Sales Consultant",
+      "company": "Xiaomi Technology · Part-time",
+      "duration": "Jan 2022 - Apr 2022 · 4 mos",
+      "description": "Selling Xiaomi Smartphones and ecosystem, assisting clients making recommendations, ensuring stock of products, managing checkout, unboxing, review and delivery of purchased products."
+    }
+  ],
+  "education": [
+    {
+      "school": "Duoc UC",
+      "degree": "Bachelor of Engineering - BE, Computer Software Engineering",
+      "duration": "Aug 2024 - Nov 2025"
+    },
+    {
+      "school": "Duoc UC",
+      "degree": "Associate's degree, Computer Programming/Programmer, General",
+      "duration": "Jan 2021 - Jul 2023"
+    }
+  ],
+  "skills": [
+    "Atlassian",
+    "GraphQL"
+  ],
+  "contact": {
+    "linkedin_url": "https://www.linkedin.com/in/me/"
+  },
+  "scraped_at": "2025-09-28T18:44:19.707181",
+  "scraper_version": "1.0.0"
+}
