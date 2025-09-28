@@ -118,8 +118,6 @@ ehthumbs.db
 Thumbs.db
 
 # Project specific
-linkedin_data.json
-resume.md
 .env
 
 # Playwright
