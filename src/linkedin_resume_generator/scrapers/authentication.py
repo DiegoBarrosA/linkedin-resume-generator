@@ -39,7 +39,7 @@ class AuthenticationHandler:
             self.logger.info("Starting LinkedIn authentication")
             
             # Navigate to LinkedIn login
-            await page.goto("https://www.linkedin.com/login", timeout=30000)
+            await page.goto("https://www.linkedin.com/login", timeout=self.settings.scraping.timeout * 1000)
             await page.wait_for_load_state("networkidle")
             
             # Check if already logged in
@@ -93,7 +93,7 @@ class AuthenticationHandler:
         try:
             # Enter email
             email_selector = "#username"
-            await page.wait_for_selector(email_selector, timeout=10000)
+            await page.wait_for_selector(email_selector, timeout=self.settings.scraping.timeout * 1000)
             await page.fill(email_selector, self.credentials.email)
             
             # Enter password
@@ -105,7 +105,7 @@ class AuthenticationHandler:
             await page.click(login_button)
             
             # Wait for navigation or error
-            await page.wait_for_load_state("networkidle", timeout=15000)
+            await page.wait_for_load_state("networkidle", timeout=self.settings.scraping.timeout * 1000)
             
             self.logger.debug("Credentials entered successfully")
             
@@ -177,7 +177,7 @@ class AuthenticationHandler:
                     break
             
             # Wait for verification
-            await page.wait_for_load_state("networkidle", timeout=15000)
+            await page.wait_for_load_state("networkidle", timeout=self.settings.scraping.timeout * 1000)
             
             self.logger.debug("2FA code submitted")
             
@@ -205,7 +205,7 @@ class AuthenticationHandler:
             
             for selector in success_indicators:
                 try:
-                    await page.wait_for_selector(selector, timeout=5000)
+                    await page.wait_for_selector(selector, timeout=self.settings.scraping.timeout * 1000)
                     return True
                 except Exception:
                     continue
@@ -220,7 +220,7 @@ class AuthenticationHandler:
         """Logout from LinkedIn."""
         try:
             # Navigate to logout URL
-            await page.goto("https://www.linkedin.com/m/logout/", timeout=10000)
+            await page.goto("https://www.linkedin.com/m/logout/", timeout=self.settings.scraping.timeout * 1000)
             await page.wait_for_load_state("networkidle")
             
             self.logger.info("Logged out from LinkedIn")

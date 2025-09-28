@@ -186,7 +186,7 @@ class LinkedInScraper:
             # Wait for profile content to load
             await self.page.wait_for_selector(
                 ".pv-text-details__left-panel, .profile-header", 
-                timeout=15000
+                timeout=self.settings.scraping.timeout * 1000
             )
             
             self.logger.debug(f"Navigated to profile: {url}")
