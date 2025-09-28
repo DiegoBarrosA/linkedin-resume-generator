@@ -1,6 +1,38 @@
 # LinkedIn Resume Generator
 
-An automated system that scrapes **ANY** LinkedIn profile and generates a professional resume hosted on GitHub Pages. **No hardcoding required** - works for everyone out of the box!
+An automated system that scrapes **ANY** LinkedIn profile and generates a professional resume hosted on GitHub Pages.
+
+## ⚠️ **CRITICAL LEGAL COMPLIANCE**
+
+### 🚨 **LinkedIn Terms of Service Compliance**
+
+**THIS TOOL IS FOR YOUR OWN PROFILE ONLY**
+
+- **✅ ALLOWED**: Scraping YOUR OWN LinkedIn profile for personal resume generation
+- **❌ PROHIBITED**: Storing raw scraped LinkedIn data long-term
+- **❌ PROHIBITED**: Redistributing or sharing scraped LinkedIn content
+- **❌ PROHIBITED**: Using this tool on other people's profiles
+
+### 🔒 **Built-in Privacy Safeguards**
+
+This tool includes automatic compliance features:
+- **Automatic Data Cleanup**: Raw LinkedIn data is processed and immediately deleted
+- **Privacy-Safe Processing**: Only final resume output is retained
+- **User Confirmation**: Requires explicit confirmation for own-profile use
+- **Compliance Logging**: All operations include ToS compliance markers
+
+### 📋 **Legal Requirements**
+
+- **Personal Use Only**: Use exclusively with your own LinkedIn account
+- **No Data Retention**: Raw scraped data is automatically cleaned up
+- **No Redistribution**: Generated resumes are for your personal use only
+- **Compliance Monitoring**: LinkedIn actively monitors and litigates scraping violations
+
+### ⚖️ **Legal Disclaimer**
+
+**IMPORTANT**: LinkedIn's Terms of Service expressly forbid storing scraped profile content or redistributing it. LinkedIn has been actively litigating against scraping practices. This tool is designed with compliance safeguards, but users are solely responsible for ensuring their usage complies with LinkedIn's Terms of Service and all applicable laws.
+
+**USE AT YOUR OWN RISK**: This tool is provided for educational purposes. Users assume full legal responsibility for compliance with LinkedIn's Terms of Service.
 
 ## 🚀 Features
 

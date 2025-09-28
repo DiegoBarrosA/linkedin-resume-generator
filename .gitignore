@@ -120,6 +120,20 @@ Thumbs.db
 # Project specific
 .env
 
+# LinkedIn compliance - NEVER commit raw scraped data
+linkedin_data.json
+linkedin_data_enhanced.json
+linkedin_raw.json
+scraped_linkedin.json
+profile_data.json
+*linkedin_data*.json
+*linkedin_raw*.json
+*scraped_linkedin*.json
+*linkedin*.json
+
+# Compliance audit logs
+compliance_audit_*.json
+
 # Playwright
 test-results/
 playwright-report/

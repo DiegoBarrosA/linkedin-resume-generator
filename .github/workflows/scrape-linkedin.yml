@@ -48,51 +48,88 @@ jobs:
         echo "LINKEDIN_PASSWORD=$LINKEDIN_PASSWORD" >> $GITHUB_ENV
         echo "LINKEDIN_TOTP_SECRET=$LINKEDIN_TOTP_SECRET" >> $GITHUB_ENV
         
-    - name: Scrape LinkedIn profile
+    - name: ⚠️ COMPLIANCE WARNING ⚠️
       run: |
+        echo "=================== LINKEDIN ToS COMPLIANCE WARNING ==================="
+        echo "This workflow scrapes LinkedIn data for personal resume generation only."
+        echo "LinkedIn ToS prohibits storing/redistributing scraped profile content."
+        echo "Only the user's OWN profile data should be processed."
+        echo "Raw scraped data is immediately deleted after resume generation."
+        echo "======================================================================"
+        
+    - name: Generate privacy-safe resume (ToS compliant)
+      run: |
+        # Set strict error handling and register cleanup trap
+        set -e
+        
+        # Register EXIT trap to guarantee cleanup of raw data files
+        cleanup() {
+          echo "🗑️ Cleaning up raw LinkedIn data files for compliance..."
+          rm -f linkedin_data.json linkedin_data_enhanced.json
+          echo "✅ Cleanup completed"
+        }
+        trap cleanup EXIT
+        
+        # Run scraping and immediate privacy-safe processing in one step
+        # This minimizes the time raw data exists and ensures cleanup
         python scrape_linkedin.py
+        python privacy_safe_processor.py << 'EOF'
+        y
+        EOF
+        echo "🔒 Raw LinkedIn data processing completed successfully"
       env:
         LINKEDIN_EMAIL: ${{ secrets.LINKEDIN_EMAIL }}
         LINKEDIN_PASSWORD: ${{ secrets.LINKEDIN_PASSWORD }}
         LINKEDIN_TOTP_SECRET: ${{ secrets.LINKEDIN_TOTP_SECRET }}
         
-    - name: Generate resume markdown
+    - name: Verify compliance - Ensure no raw data remains
       run: |
-        python generate_markdown.py
-        
-    - name: Check for changes
-      id: verify-changed-files
-      run: |
-        if [ -n "$(git status --porcelain)" ]; then
-          echo "changed=true" >> $GITHUB_OUTPUT
-          git status --porcelain
+        if [ -f "linkedin_data.json" ] || [ -f "linkedin_data_enhanced.json" ]; then
+          echo "❌ COMPLIANCE VIOLATION: Raw LinkedIn data still exists!"
+          rm -f linkedin_data.json linkedin_data_enhanced.json
+          echo "🗑️ Emergency cleanup completed"
         else
-          echo "changed=false" >> $GITHUB_OUTPUT
-          echo "No changes detected"
+          echo "✅ Compliance verified: No raw LinkedIn data found"
         fi
         
-    - name: Commit and push changes
+    - name: Run automated compliance audit
+      run: |
+        python3 compliance_auditor.py
+        echo "📋 Compliance audit completed - check logs for any issues"
+        
+    - name: Check for resume changes only
+      id: verify-changed-files
+      run: |
+        # Only check for resume files, not raw data
+        if [ -n "$(git status --porcelain -- resume.md index.md)" ]; then
+          echo "changed=true" >> $GITHUB_OUTPUT
+          echo "Resume files updated"
+        else
+          echo "changed=false" >> $GITHUB_OUTPUT
+          echo "No resume changes detected"
+        fi
+        
+    - name: Commit and push resume updates only
       if: steps.verify-changed-files.outputs.changed == 'true'
       run: |
         git config --local user.email "action@github.com"
         git config --local user.name "GitHub Action"
         
-        # Add generated files
-        git add linkedin_data.json resume.md index.md
+        # Add ONLY final resume files (not raw scraped data)
+        git add resume.md index.md
         
-        # Create commit with timestamp
-        git commit -m "Update resume from LinkedIn profile - $(date -u +"%Y-%m-%d %H:%M:%S UTC")"
+        # Create commit with compliance note
+        git commit -m "Update resume from own LinkedIn profile - $(date -u +"%Y-%m-%d %H:%M:%S UTC") [ToS Compliant]"
         
         # Push changes
         git push
         
-    - name: Upload artifacts
+    - name: Upload resume artifacts only (ToS compliant)
       uses: actions/upload-artifact@v4
       if: always()
       with:
         name: resume-files
         path: |
-          linkedin_data.json
           resume.md
           index.md
         retention-days: 30

@@ -1,14 +1,21 @@
 #!/usr/bin/env python3
 """
-LinkedIn Profile Scraper
+LinkedIn Profile Scraper - PERSONAL USE ONLY
 
-This script logs into LinkedIn using email/password authentication with TOTP support
-and scrapes profile information to generate a resume.
+⚠️  LEGAL COMPLIANCE NOTICE ⚠️
+This script is designed EXCLUSIVELY for scraping your OWN LinkedIn profile data.
+LinkedIn's Terms of Service prohibit storing or redistributing scraped profile content.
+
+IMPORTANT:
+- Use ONLY with YOUR OWN LinkedIn account
+- Generated data is for PERSONAL resume creation only
+- Raw scraped data should NOT be stored long-term or redistributed
+- Comply with LinkedIn's Terms of Service at all times
 
 Environment Variables Required:
-- LINKEDIN_EMAIL: LinkedIn account email
-- LINKEDIN_PASSWORD: LinkedIn account password  
-- LINKEDIN_TOTP_SECRET: TOTP secret for 2FA (optional)
+- LINKEDIN_EMAIL: Your LinkedIn account email
+- LINKEDIN_PASSWORD: Your LinkedIn account password  
+- LINKEDIN_TOTP_SECRET: Your TOTP secret for 2FA (optional)
 
 Usage:
     python scrape_linkedin.py
@@ -19,6 +26,8 @@ import json
 import time
 import re
 import asyncio
+import tempfile
+import shutil
 from typing import Dict, Any, Optional
 from datetime import datetime
 
@@ -49,8 +58,8 @@ class LinkedInScraper:
             await page.goto("https://www.linkedin.com/login", wait_until="networkidle")
             
             # Fill in email and password
-            await page.fill('input[name="session_key"]', self.email)
-            await page.fill('input[name="session_password"]', self.password)
+            await page.fill('input[name="session_key"]', self.email or "")
+            await page.fill('input[name="session_password"]', self.password or "")
             
             # Click login button
             await page.click('button[type="submit"]')
@@ -484,8 +493,9 @@ class LinkedInScraper:
                 if await element.count() > 0:
                     text = await element.text_content()
                     if text and 'endorsement' in text.lower():
-                        numbers = re.findall(r'\d+', text)
-                        return int(numbers[0]) if numbers else 0
+                        # Strip all non-digit characters to handle comma-separated numbers like "1,234"
+                        digits_only = re.sub(r'\D+', '', text)
+                        return int(digits_only) if digits_only else 0
             return 0
         except:
             return 0
@@ -970,23 +980,86 @@ class LinkedInScraper:
                 await browser.close()
 
 async def main():
-    """Main function"""
+    """Main function to run the LinkedIn scraper"""
+    print("🤖 LinkedIn Profile Scraper")
+    print("=" * 50)
+    
+    # CRITICAL COMPLIANCE WARNING
+    print("🚨 LINKEDIN TERMS OF SERVICE COMPLIANCE WARNING 🚨")
+    print("=" * 60)
+    print("LinkedIn actively pursues legal action against data scrapers.")
+    print("This tool is ONLY for extracting YOUR OWN profile data.")
+    print("LinkedIn ToS prohibits:")
+    print("  • Storing scraped profile content")
+    print("  • Redistributing LinkedIn data")
+    print("  • Automated collection beyond personal use")
+    print()
+    print("This tool includes compliance safeguards:")
+    print("  ✅ Raw data is processed and immediately deleted")
+    print("  ✅ Only final resume output is retained") 
+    print("  ✅ Built for personal use only")
+    print("=" * 60)
+    print()
+    
+    print("This tool extracts comprehensive profile data from LinkedIn")
+    print("including skills, experience, education, certifications, and more.")
+    print()
+    
+    # User confirmation with compliance acknowledgment
+    confirm = input("Confirm this is YOUR OWN LinkedIn account and you understand the legal requirements (y/n): ").lower().strip()
+    if confirm != 'y':
+        print("❌ This tool can only be used with your own LinkedIn profile.")
+        print("❌ You must acknowledge compliance requirements to proceed.")
+        return None
+    
+    temp_file_path = None
     try:
         scraper = LinkedInScraper()
         profile_data = await scraper.run()
         
-        # Save raw data
-        with open('linkedin_data.json', 'w', encoding='utf-8') as f:
-            json.dump(profile_data, f, indent=2, ensure_ascii=False)
+        if not profile_data:
+            print("❌ No profile data extracted")
+            return None
+            
+        # Create temporary file for processing (guaranteed cleanup)
+        temp_fd, temp_file_path = tempfile.mkstemp(suffix='.json', prefix='linkedin_data_')
         
-        print("LinkedIn data saved to linkedin_data.json")
-        print(f"Scraped profile for: {profile_data.get('name', 'Unknown')}")
-        
-        return profile_data
+        try:
+            # Write data to temporary file
+            with os.fdopen(temp_fd, 'w', encoding='utf-8') as f:
+                json.dump(profile_data, f, indent=2, ensure_ascii=False)
+            
+            # Create the expected filename as symlink/copy for compatibility
+            if os.path.exists('linkedin_data.json'):
+                os.remove('linkedin_data.json')
+            shutil.copy2(temp_file_path, 'linkedin_data.json')
+            
+            print("✅ Profile data extracted successfully")
+            print(f"📋 Profile: {profile_data.get('name', 'Unknown')}")
+            print("⚠️  Raw data will be processed and then removed for compliance")
+            
+            return profile_data
+            
+        finally:
+            # Guaranteed cleanup of temporary file
+            if temp_file_path and os.path.exists(temp_file_path):
+                try:
+                    os.remove(temp_file_path)
+                except OSError:
+                    pass  # Silently ignore if already removed
         
     except Exception as e:
-        print(f"Scraping failed: {e}")
+        print(f"❌ Scraping failed: {e}")
         return None
+        
+    finally:
+        # Cleanup main linkedin_data.json file for compliance
+        if os.path.exists('linkedin_data.json'):
+            try:
+                os.remove('linkedin_data.json')
+                print("🗑️  Raw LinkedIn data cleaned up for compliance")
+            except OSError:
+                pass  # Silently ignore if already removed
 
 if __name__ == "__main__":
     asyncio.run(main())

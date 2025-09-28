@@ -78,11 +78,14 @@ class SkillsOrganizer:
         if not headline:
             return skills
         
-        # Common separators in headlines
-        separators = ["|", "•", "-", "·", ",", "&", "and"]
+        # First, handle hyphen-separated items (only when hyphen acts as divider)
+        # Split on " - " (hyphen with spaces) to preserve hyphenated words like "Problem-Solving"
+        parts = [p.strip() for p in headline.split(' - ')]
         
-        # Split headline by separators
-        parts = [headline]
+        # Common separators in headlines (hyphen handled separately above)
+        separators = ["|", "•", "·", ",", "&", "and", "—", "–"]
+        
+        # Split headline parts by remaining separators
         for sep in separators:
             new_parts = []
             for part in parts:
@@ -109,10 +112,19 @@ class SkillsOrganizer:
         """Categorize a skill based on predefined categories"""
         skill_lower = skill_name.lower()
         
+        # First pass: exact matches
         for category, skills_list in self.skill_categories.items():
-            if any(known_skill.lower() in skill_lower or skill_lower in known_skill.lower() 
-                   for known_skill in skills_list):
+            if any(known_skill.lower() == skill_lower for known_skill in skills_list):
                 return category
+        
+        # Second pass: substring matches, but only for skills longer than 2 characters
+        # to avoid false positives like "R" matching "Docker"
+        if len(skill_lower) > 2:
+            for category, skills_list in self.skill_categories.items():
+                if any(known_skill.lower() in skill_lower or 
+                       (len(known_skill) > 2 and skill_lower in known_skill.lower()) 
+                       for known_skill in skills_list):
+                    return category
         
         return "Other"
     
