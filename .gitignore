@@ -138,3 +138,20 @@ compliance_audit_*.json
 test-results/
 playwright-report/
 playwright/.cache/
+# Migration backup
+migration_backup/
+
+# New structure specific
+src/linkedin_resume_generator/**/*.pyc
+src/linkedin_resume_generator/**/__pycache__/
+
+# Development
+.coverage
+htmlcov/
+.pytest_cache/
+.mypy_cache/
+
+# Build artifacts
+build/
+dist/
+*.egg-info/

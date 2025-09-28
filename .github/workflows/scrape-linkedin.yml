@@ -65,22 +65,24 @@ jobs:
         # Register EXIT trap to guarantee cleanup of raw data files
         cleanup() {
           echo "🗑️ Cleaning up raw LinkedIn data files for compliance..."
-          rm -f linkedin_data.json linkedin_data_enhanced.json
+          rm -f linkedin_data.json linkedin_data_enhanced.json profile_data.json
           echo "✅ Cleanup completed"
         }
         trap cleanup EXIT
         
-        # Run scraping and immediate privacy-safe processing in one step
-        # This minimizes the time raw data exists and ensures cleanup
-        
         # Set CI environment flag to bypass interactive confirmation
         export LINKEDIN_CI_MODE=true
         
-        python scrape_linkedin.py
-        python privacy_safe_processor.py << 'EOF'
-        y
-        EOF
-        echo "🔒 Raw LinkedIn data processing completed successfully"
+        # Try new CLI first, fallback to legacy if needed
+        if python -c "import src.linkedin_resume_generator" 2>/dev/null; then
+          echo "🚀 Using new modular architecture"
+          python main.py scrape --format both
+        else
+          echo "📦 Using legacy implementation"
+          python run_legacy.py
+        fi
+        
+        echo "🔒 Resume generation completed successfully"
       env:
         LINKEDIN_EMAIL: ${{ secrets.LINKEDIN_EMAIL }}
         LINKEDIN_PASSWORD: ${{ secrets.LINKEDIN_PASSWORD }}

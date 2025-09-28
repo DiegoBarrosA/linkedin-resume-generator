@@ -1,257 +1,394 @@
-# LinkedIn Resume Generator
+# LinkedIn Resume Generator v2.0
 
-An automated system that scrapes **ANY** LinkedIn profile and generates a professional resume hosted on GitHub Pages.
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
+[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 
-## ⚠️ **CRITICAL LEGAL COMPLIANCE**
+> **⚠️ COMPLIANCE NOTICE:** This tool is designed for personal use only. It scrapes LinkedIn data exclusively from your own profile for resume generation. Raw scraped data is automatically deleted after processing to comply with LinkedIn's Terms of Service.
 
-### 🚨 **LinkedIn Terms of Service Compliance**
+## 🚀 What's New in v2.0
 
-**THIS TOOL IS FOR YOUR OWN PROFILE ONLY**
+- **🏗️ Modular Architecture**: Clean separation of concerns with dedicated modules
+- **🔧 Type Safety**: Full Pydantic integration for data validation
+- **📋 Rich CLI**: Modern command-line interface with helpful feedback
+- **⚡ Async/Await**: Improved performance with async operations  
+- **🔒 Enhanced Compliance**: Automated compliance checking and data cleanup
+- **🧪 Better Testing**: Comprehensive test suite with proper mocking
+- **📖 Configuration Management**: Centralized, validated configuration system
+- **🛡️ Error Handling**: Structured exceptions and logging
 
-- **✅ ALLOWED**: Scraping YOUR OWN LinkedIn profile for personal resume generation
-- **❌ PROHIBITED**: Storing raw scraped LinkedIn data long-term
-- **❌ PROHIBITED**: Redistributing or sharing scraped LinkedIn content
-- **❌ PROHIBITED**: Using this tool on other people's profiles
+## 📦 Installation
 
-### 🔒 **Built-in Privacy Safeguards**
+### Quick Start
 
-This tool includes automatic compliance features:
-- **Automatic Data Cleanup**: Raw LinkedIn data is processed and immediately deleted
-- **Privacy-Safe Processing**: Only final resume output is retained
-- **User Confirmation**: Requires explicit confirmation for own-profile use
-- **Compliance Logging**: All operations include ToS compliance markers
+```bash
+# Clone the repository
+git clone https://github.com/DiegoBarrosA/diego-barros-resume-generator.git
+cd diego-barros-resume-generator
 
-### 📋 **Legal Requirements**
+# Install dependencies
+pip install -r requirements.txt
 
-- **Personal Use Only**: Use exclusively with your own LinkedIn account
-- **No Data Retention**: Raw scraped data is automatically cleaned up
-- **No Redistribution**: Generated resumes are for your personal use only
-- **Compliance Monitoring**: LinkedIn actively monitors and litigates scraping violations
+# Install browser for Playwright
+playwright install chromium
 
-### ⚖️ **Legal Disclaimer**
-
-**IMPORTANT**: LinkedIn's Terms of Service expressly forbid storing scraped profile content or redistributing it. LinkedIn has been actively litigating against scraping practices. This tool is designed with compliance safeguards, but users are solely responsible for ensuring their usage complies with LinkedIn's Terms of Service and all applicable laws.
-
-**USE AT YOUR OWN RISK**: This tool is provided for educational purposes. Users assume full legal responsibility for compliance with LinkedIn's Terms of Service.
-
-## 🚀 Features
-
-- **Universal LinkedIn Scraping**: Automatically extracts ALL skills and data from any LinkedIn profile
-- **Zero Configuration**: No hardcoded skills or manual data entry required
-- **Intelligent Categorization**: Automatically organizes skills by technology domains
-- **TOTP Authentication Support**: Handles LinkedIn 2FA with TOTP codes
-- **Comprehensive Data Extraction**: Skills, experience, education, certifications, projects, and more
-- **Professional Resume Generation**: Creates beautifully formatted markdown resumes
-- **GitHub Pages Hosting**: Automatically deploys your resume to a public webpage
-- **Weekly Auto-Updates**: GitHub Actions runs weekly to keep your resume current
-- **Reusable for Anyone**: Clone, configure credentials, and run - works for any LinkedIn profile
-
-## ✨ Why This is Better
-
-### 🎯 **Truly Universal**
-- **No Hardcoding**: Automatically extracts ALL skills from your actual LinkedIn profile
-- **Works for Everyone**: Any LinkedIn profile, any skill set, any industry
-- **Adaptive**: Handles different LinkedIn layouts and profile structures
-- **Smart Categorization**: Automatically organizes skills into relevant categories
-- **Complete Extraction**: Gets skills, endorsements, experience, education, certifications, projects, and more
-
-### 🔧 **Easy to Use**
-1. **Clone** this repository
-2. **Set** your LinkedIn credentials in GitHub Secrets  
-3. **Run** - that's it! No code changes needed
-
-## 📋 Prerequisites
-
-- GitHub account
-- LinkedIn account with email/password login
-- Basic knowledge of GitHub repositories and settings
-
-## 🔧 Setup Instructions
-
-### 1. Repository Setup
-
-1. **Fork or clone** this repository to your GitHub account
-2. **Enable GitHub Pages**:
-   - Go to repository Settings → Pages
-   - Set Source to "Deploy from a branch"
-   - Select branch: `main` and folder: `/ (root)`
-   - Save the settings
-
-### 2. Configure GitHub Secrets
-
-Add the following secrets in your repository settings (Settings → Secrets and variables → Actions):
-
-#### Required Secrets:
-- `LINKEDIN_EMAIL`: Your LinkedIn login email
-- `LINKEDIN_PASSWORD`: Your LinkedIn login password
-
-#### Optional Secrets:
-- `LINKEDIN_TOTP_SECRET`: Your TOTP secret key (if you use 2FA)
-
-#### How to add secrets:
-1. Go to your repository on GitHub
-2. Click Settings → Secrets and variables → Actions
-3. Click "New repository secret"
-4. Add each secret with the exact name shown above
-
-### 3. TOTP Setup (If using 2FA)
-
-If your LinkedIn account uses 2FA with an authenticator app:
-
-1. **Get your TOTP secret**:
-   - Go to LinkedIn Security settings
-   - When setting up 2FA, LinkedIn will show a QR code
-   - Look for the manual entry option to get the secret key
-   - Or scan the QR code with a TOTP app and export the secret
-
-2. **Add the secret**:
-   - Add the secret key as `LINKEDIN_TOTP_SECRET` in GitHub Secrets
-   - The secret should be a base32-encoded string (usually 16-32 characters)
-
-### 4. Test the Workflow
-
-1. **Manual run**:
-   - Go to Actions tab in your repository
-   - Select "Update LinkedIn Resume" workflow
-   - Click "Run workflow" → "Run workflow"
-
-2. **Check the results**:
-   - Monitor the workflow execution
-   - Check if files are generated and committed
-   - Visit your GitHub Pages URL (usually `https://yourusername.github.io/repository-name`)
-
-## 📁 Project Structure
-
-```
-├── .github/workflows/
-│   └── scrape-linkedin.yml    # GitHub Actions workflow
-├── scrape_linkedin.py         # LinkedIn scraping script
-├── generate_markdown.py       # Markdown resume generator
-├── requirements.txt          # Python dependencies
-├── _config.yml              # GitHub Pages configuration
-├── index.md                 # GitHub Pages homepage
-└── README.md               # This file
+# Set up environment variables
+cp .env.example .env
+# Edit .env with your LinkedIn credentials
 ```
 
-## 🔄 How It Works
+### Development Installation
 
-1. **Scheduled Execution**: GitHub Actions runs every Sunday at 6 AM UTC
-2. **LinkedIn Scraping**: The workflow logs into LinkedIn and scrapes profile data
-3. **Data Processing**: Profile data is cleaned and structured
-4. **Resume Generation**: Markdown resume is generated from the structured data
-5. **Deployment**: Files are committed to the repository and GitHub Pages auto-deploys
+```bash
+# Install in development mode
+pip install -e .[dev]
 
-## 📝 Generated Files
+# Set up pre-commit hooks
+pre-commit install
 
-The workflow generates these files:
+# Run tests
+pytest
+```
 
-- `linkedin_data.json`: Raw scraped profile data
-- `resume.md`: Formatted markdown resume
-- `index.md`: GitHub Pages homepage with the resume
+## 🔧 Configuration
 
-## ⚙️ Customization
+Create a `.env` file with your LinkedIn credentials:
 
-### Resume Template
+```env
+# LinkedIn Authentication
+LINKEDIN_EMAIL=your-email@example.com
+LINKEDIN_PASSWORD=your-password
+LINKEDIN_TOTP_SECRET=your-2fa-secret-key
 
-Edit the template in `generate_markdown.py` to customize:
-- Resume sections and order
-- Formatting and styling
-- Additional data fields
+# Optional Configuration
+ENVIRONMENT=production
+DEBUG=false
+LINKEDIN_CI_MODE=false
 
-### Scraping Frequency
+# Output Configuration
+OUTPUT_DIR=.
+RESUME_FILENAME=resume.md
+INDEX_FILENAME=index.md
 
-Modify the cron schedule in `.github/workflows/scrape-linkedin.yml`:
+# Compliance Settings
+AUTO_CLEANUP=true
+PRIVACY_MODE=true
+AUDIT_ENABLED=true
+```
+
+## 📖 Usage
+
+### Command Line Interface (Recommended)
+
+```bash
+# Generate resume with new CLI
+python main.py scrape
+
+# Validate configuration
+python main.py validate
+
+# Run compliance audit
+python main.py audit
+
+# Cleanup temporary files
+python main.py cleanup
+
+# Generate from custom template
+python main.py generate custom_template.md -o custom_resume.md
+
+# Get help
+python main.py --help
+```
+
+### Legacy Compatibility
+
+```bash
+# Run with legacy interface (backward compatibility)
+python run_legacy.py
+
+# Direct module execution (old method still works)
+python scrape_linkedin.py  # if available
+```
+
+### Programmatic Usage
+
+```python
+import asyncio
+from linkedin_resume_generator import LinkedInScraper, ResumeGenerator, get_settings
+
+async def generate_resume():
+    settings = get_settings()
+    
+    async with LinkedInScraper(settings) as scraper:
+        profile_data = await scraper.scrape_profile()
+        
+        generator = ResumeGenerator(settings)
+        resume_content = generator.generate_markdown(profile_data)
+        
+        with open("resume.md", "w") as f:
+            f.write(resume_content)
+
+# Run the async function
+asyncio.run(generate_resume())
+```
+
+## 🏗️ Architecture Overview
+
+```
+src/linkedin_resume_generator/
+├── config/                 # Configuration management
+│   ├── __init__.py
+│   └── settings.py        # Pydantic settings with validation
+├── models/                # Data models
+│   ├── __init__.py
+│   └── profile.py         # Pydantic models for profile data
+├── scrapers/              # Web scraping components
+│   ├── __init__.py
+│   ├── authentication.py  # LinkedIn authentication handler
+│   ├── skill_extractor.py # Universal skill extraction
+│   └── linkedin_scraper.py # Main scraper coordinator
+├── processors/            # Data processors
+│   ├── __init__.py
+│   ├── privacy_processor.py # Privacy-safe data processing
+│   └── compliance_auditor.py # ToS compliance checking
+├── generators/            # Resume generators
+│   ├── __init__.py
+│   └── resume_generator.py # Markdown resume generation
+├── utils/                 # Utilities
+│   ├── __init__.py
+│   ├── exceptions.py      # Custom exceptions
+│   └── logging.py         # Structured logging
+├── cli/                   # Command line interface
+│   ├── __init__.py
+│   └── main.py           # Click-based CLI
+└── __init__.py           # Package initialization
+```
+
+## ✨ Key Features
+
+### 🎯 Universal Skill Extraction
+- **Dynamic Detection**: No hardcoded skill lists
+- **Multiple Sources**: Skills from descriptions, headlines, and sections
+- **Smart Categorization**: Automatic skill grouping
+- **Confidence Scoring**: Reliability metrics for extracted skills
+
+### 🔐 Compliance & Privacy
+- **Automatic Cleanup**: Raw data deleted immediately after processing
+- **Compliance Auditing**: Automated ToS violation checking
+- **Privacy Mode**: Safe data processing without storing sensitive info
+- **Git Protection**: Enhanced `.gitignore` patterns
+
+### 🚀 Modern Development
+- **Type Safety**: Full type hints with Pydantic validation
+- **Async Operations**: Non-blocking I/O for better performance
+- **Structured Logging**: Rich, filterable logs with context
+- **Error Handling**: Custom exceptions with detailed context
+
+### 🧪 Testing & Quality
+- **Comprehensive Tests**: Unit and integration test suites
+- **Environment Gating**: Safe testing without live LinkedIn calls
+- **Code Quality**: Black, isort, flake8, mypy integration
+- **Pre-commit Hooks**: Automated code quality checks
+
+## 🔄 Migration from v1.x
+
+### Automatic Migration
+
+The system includes backward compatibility:
+
+```bash
+# Old usage still works
+python scrape_linkedin.py  # Falls back to legacy mode
+
+# New usage (recommended)
+python main.py scrape
+```
+
+### Configuration Migration
+
+Old `.env` variables are automatically mapped:
+
+```env
+# Old (still works)
+LINKEDIN_EMAIL=...
+LINKEDIN_PASSWORD=...
+TOTP_SECRET=...
+
+# New (same variables, enhanced validation)
+LINKEDIN_EMAIL=...
+LINKEDIN_PASSWORD=...
+LINKEDIN_TOTP_SECRET=...
+```
+
+### Code Migration
+
+```python
+# Old way
+from scrape_linkedin import LinkedInScraper
+scraper = LinkedInScraper()
+
+# New way
+from linkedin_resume_generator import LinkedInScraper, get_settings
+settings = get_settings()
+async with LinkedInScraper(settings) as scraper:
+    # Use scraper
+```
+
+## 🤖 GitHub Actions
+
+The workflow automatically adapts to the new architecture:
+
 ```yaml
-schedule:
-  - cron: '0 6 * * 0'  # Sunday at 6 AM UTC
+- name: Generate Resume
+  run: |
+    export LINKEDIN_CI_MODE=true
+    
+    # Tries new CLI first, falls back to legacy
+    if python -c "import src.linkedin_resume_generator" 2>/dev/null; then
+      python main.py scrape --format both
+    else
+      python run_legacy.py
+    fi
 ```
 
-### GitHub Pages Theme
+## 🧪 Testing
 
-Change the theme in `_config.yml`:
-```yaml
-theme: minima  # or jekyll-theme-minimal, etc.
+```bash
+# Run all tests
+pytest
+
+# Run with coverage
+pytest --cov=src --cov-report=html
+
+# Run only unit tests
+pytest tests/unit/
+
+# Run only integration tests (requires environment setup)
+ENABLE_LINKEDIN_TESTING=true pytest tests/integration/
+
+# Run specific test file
+pytest tests/unit/test_skill_extractor.py -v
 ```
 
-## 🚨 Legal and Ethical Considerations
+## 🛠️ Development
 
-### LinkedIn Terms of Service
+### Code Quality
 
-- **Review LinkedIn's ToS**: Ensure your usage complies with LinkedIn's Terms of Service
-- **Rate Limiting**: The script includes delays to avoid aggressive scraping
-- **Personal Use**: This tool is designed for scraping your own profile data
-- **Respect robots.txt**: LinkedIn's robots.txt should be considered
+```bash
+# Format code
+black src/ tests/
+isort src/ tests/
 
-### Privacy and Security
+# Lint code  
+flake8 src/ tests/
+mypy src/
 
-- **Secure Credentials**: Always use GitHub Secrets for sensitive information
-- **2FA Recommended**: Enable 2FA on both GitHub and LinkedIn accounts
-- **Regular Updates**: Keep dependencies updated for security patches
+# Run all quality checks
+pre-commit run --all-files
+```
 
-### Disclaimer
+### Project Structure
 
-This tool is provided as-is for educational and personal use. Users are responsible for ensuring compliance with all applicable terms of service and laws.
+- **Configuration**: Centralized in `src/linkedin_resume_generator/config/`
+- **Models**: Pydantic models in `src/linkedin_resume_generator/models/`  
+- **Business Logic**: Scrapers, processors, generators in dedicated modules
+- **CLI**: Rich command-line interface in `src/linkedin_resume_generator/cli/`
+- **Tests**: Comprehensive test suite in `tests/`
 
-## 🛠️ Troubleshooting
+## 📋 CLI Reference
+
+### Commands
+
+- `scrape` - Scrape LinkedIn profile and generate resume
+- `validate` - Validate configuration and credentials
+- `audit` - Run compliance audit
+- `cleanup` - Clean up temporary files
+- `generate` - Generate resume from existing data with custom template
+
+### Options
+
+- `--debug` - Enable debug logging
+- `--config-file` - Specify config file path
+- `--profile-url` - Specific LinkedIn profile URL
+- `--output-dir` - Output directory
+- `--format` - Output format (markdown/json/both)
+
+## ⚠️ Compliance Guidelines
+
+### Important Notes
+
+1. **Personal Use Only**: Only scrape your own LinkedIn profile
+2. **Respect Rate Limits**: Don't run excessively frequently
+3. **Data Cleanup**: Raw data is automatically deleted after processing
+4. **ToS Compliance**: Regularly review LinkedIn's Terms of Service
+
+### Compliance Features
+
+- **Automated Auditing**: Built-in compliance checking
+- **Privacy Processing**: Safe data handling without storing sensitive info
+- **Git Protection**: Prevents accidental commits of raw data
+- **Cleanup Verification**: Ensures no raw data remains
+
+## 🔧 Troubleshooting
 
 ### Common Issues
 
-1. **Authentication Failed**:
-   - Verify GitHub Secrets are set correctly
-   - Check if LinkedIn requires additional verification
-   - Try running the workflow manually for debugging
+**Authentication Problems**
+```bash
+# Validate credentials
+python main.py validate
 
-2. **Scraping Errors**:
-   - LinkedIn may have changed their HTML structure
-   - Check workflow logs for specific error messages
-   - Update selectors in `scrape_linkedin.py` if needed
-
-3. **GitHub Pages Not Updating**:
-   - Ensure GitHub Pages is enabled
-   - Check that files are being committed
-   - Verify the `index.md` file is generated
-
-4. **TOTP Issues**:
-   - Verify the TOTP secret is correct
-   - Check that the time on GitHub Actions matches your TOTP app
-   - Try regenerating TOTP secret in LinkedIn
-
-### Debugging
-
-Enable debug mode by setting `headless=False` in `scrape_linkedin.py`:
-```python
-browser = await p.chromium.launch(headless=False)
+# Check 2FA setup
+echo $LINKEDIN_TOTP_SECRET
 ```
 
-## 📞 Support
+**Module Import Errors**
+```bash
+# Install in development mode
+pip install -e .
 
-If you encounter issues:
+# Check Python path
+python -c "import sys; print(sys.path)"
+```
 
-1. Check the GitHub Actions logs for detailed error messages
-2. Review LinkedIn's current HTML structure if selectors fail
-3. Verify all secrets are configured correctly
-4. Consider opening an issue in the repository
+**Skill Extraction Issues**
+- The system uses multiple fallback methods
+- Skills are extracted from headlines, descriptions, and skill sections
+- Check debug logs with `--debug` flag
 
-## 📄 License
+### Debug Mode
 
-This project is available under the MIT License. See LICENSE file for details.
+```bash
+# Enable verbose logging
+python main.py --debug scrape
+
+# Check configuration
+python main.py --debug validate
+```
 
 ## 🤝 Contributing
 
-Contributions are welcome! Please:
-
 1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Add tests if applicable
-5. Submit a pull request
+2. Create a feature branch: `git checkout -b feature/amazing-feature`
+3. Install development dependencies: `pip install -e .[dev]`
+4. Set up pre-commit: `pre-commit install`
+5. Make your changes and add tests
+6. Run quality checks: `pre-commit run --all-files`
+7. Commit your changes: `git commit -m 'Add amazing feature'`
+8. Push to the branch: `git push origin feature/amazing-feature`
+9. Open a Pull Request
 
-## 🔄 Version History
+## 📄 License
 
-- **v1.0.0**: Initial release with basic LinkedIn scraping and GitHub Pages deployment
-- Added TOTP authentication support
-- Added comprehensive error handling and logging
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## 🙏 Acknowledgments
+
+- **Playwright** for reliable browser automation
+- **Pydantic** for robust data validation
+- **Click** for the excellent CLI framework
+- **Rich** for beautiful terminal output
 
 ---
 
-**Note**: This tool scrapes your own LinkedIn profile data. Ensure you comply with LinkedIn's Terms of Service and use responsibly.
+**Remember**: This tool is designed to help you create professional resumes from your own LinkedIn profile. Always respect LinkedIn's Terms of Service and use responsibly.
