@@ -19,36 +19,33 @@
 
 ## 📦 Installation
 
-### Quick Start
+### Quick Installation
 
 ```bash
-# Clone the repository
 git clone https://github.com/DiegoBarrosA/diego-barros-resume-generator.git
 cd diego-barros-resume-generator
-
-# Install dependencies
 pip install -r requirements.txt
-
-# Install browser for Playwright
-playwright install chromium
-
-# Set up environment variables
-cp .env.example .env
-# Edit .env with your LinkedIn credentials
+cp .env.example .env  # Configure your credentials
 ```
 
-### Development Installation
+**📖 For detailed setup instructions, see the [Installation Guide](docs/setup.md)**
+
+## 🚀 Quick Start
+
+Generate your resume in 3 simple steps:
 
 ```bash
-# Install in development mode
-pip install -e .[dev]
+# 1. Configure credentials in .env
+LINKEDIN_EMAIL=your.email@example.com
+LINKEDIN_PASSWORD=your_password
 
-# Set up pre-commit hooks
-pre-commit install
+# 2. Generate your resume
+python main.py scrape --email your.email@example.com
 
-# Run tests
-pytest
+# 3. Find your resume in ./output/
 ```
+
+**📘 For complete usage guide, see the [Quick Start Documentation](docs/quickstart.md)**
 
 ## 🔧 Configuration
 
@@ -329,7 +326,33 @@ pre-commit run --all-files
 - **Git Protection**: Prevents accidental commits of raw data
 - **Cleanup Verification**: Ensures no raw data remains
 
-## 🔧 Troubleshooting
+## � Documentation
+
+### Complete Documentation
+
+All documentation is now organized in the `/docs` directory:
+
+- **📖 [Complete Documentation](docs/README.md)** - Full documentation index
+- **🚀 [Installation Guide](docs/setup.md)** - Detailed setup instructions  
+- **⚡ [Quick Start](docs/quickstart.md)** - Get started in minutes
+- **💻 [CLI Usage](docs/cli-usage.md)** - Complete command reference
+- **🔒 [Privacy & Compliance](docs/COMPLIANCE.md)** - Privacy and legal guidelines
+- **🏗️ [Architecture Guide](docs/architecture.md)** - Technical architecture overview
+
+### Quick Links
+
+| Topic | Link | Description |
+|-------|------|-------------|
+| Installation | [docs/setup.md](docs/setup.md) | Complete setup guide |
+| Quick Start | [docs/quickstart.md](docs/quickstart.md) | Generate your first resume |
+| CLI Reference | [docs/cli-usage.md](docs/cli-usage.md) | All commands and options |
+| Configuration | [docs/configuration.md](docs/configuration.md) | Settings and customization |
+| Templates | [docs/templates.md](docs/templates.md) | Custom resume templates |
+| Privacy | [docs/COMPLIANCE.md](docs/COMPLIANCE.md) | Privacy and compliance |
+| Examples | [docs/resume.md](docs/resume.md) | Sample output |
+| Legacy Docs | [docs/legacy/](docs/legacy/) | v1.x documentation |
+
+## �🔧 Troubleshooting
 
 ### Common Issues
 

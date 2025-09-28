@@ -1,6 +1,6 @@
 # GitHub Pages Configuration
-title: "Professional Resume"
-description: "Automatically generated resume from LinkedIn profile"
+title: "LinkedIn Resume Generator"
+description: "Professional resume generation from LinkedIn profiles with privacy compliance"
 theme: minima
 
 # Build settings
