@@ -1,15 +1,32 @@
 # LinkedIn Resume Generator
 
-An automated system that scrapes your LinkedIn profile weekly and generates a professional resume hosted on GitHub Pages.
+An automated system that scrapes **ANY** LinkedIn profile and generates a professional resume hosted on GitHub Pages. **No hardcoding required** - works for everyone out of the box!
 
 ## 🚀 Features
 
-- **Automated LinkedIn Scraping**: Uses Playwright to scrape your LinkedIn profile data
+- **Universal LinkedIn Scraping**: Automatically extracts ALL skills and data from any LinkedIn profile
+- **Zero Configuration**: No hardcoded skills or manual data entry required
+- **Intelligent Categorization**: Automatically organizes skills by technology domains
 - **TOTP Authentication Support**: Handles LinkedIn 2FA with TOTP codes
-- **Markdown Resume Generation**: Converts LinkedIn data to a formatted markdown resume
+- **Comprehensive Data Extraction**: Skills, experience, education, certifications, projects, and more
+- **Professional Resume Generation**: Creates beautifully formatted markdown resumes
 - **GitHub Pages Hosting**: Automatically deploys your resume to a public webpage
-- **Weekly Updates**: GitHub Actions runs weekly to keep your resume current
-- **Manual Triggers**: Run the workflow manually when needed
+- **Weekly Auto-Updates**: GitHub Actions runs weekly to keep your resume current
+- **Reusable for Anyone**: Clone, configure credentials, and run - works for any LinkedIn profile
+
+## ✨ Why This is Better
+
+### 🎯 **Truly Universal**
+- **No Hardcoding**: Automatically extracts ALL skills from your actual LinkedIn profile
+- **Works for Everyone**: Any LinkedIn profile, any skill set, any industry
+- **Adaptive**: Handles different LinkedIn layouts and profile structures
+- **Smart Categorization**: Automatically organizes skills into relevant categories
+- **Complete Extraction**: Gets skills, endorsements, experience, education, certifications, projects, and more
+
+### 🔧 **Easy to Use**
+1. **Clone** this repository
+2. **Set** your LinkedIn credentials in GitHub Secrets  
+3. **Run** - that's it! No code changes needed
 
 ## 📋 Prerequisites
 

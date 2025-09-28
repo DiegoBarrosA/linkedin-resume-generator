@@ -28,10 +28,54 @@ title: Resume
 
 
 
-
+**Atlassian Ecosystem:**
 
 - Atlassian
+- Jira
+- Confluence
+
+
+**Cloud & DevOps:**
+
+- Docker
+- CI/CD
+- AWS
+- Kubernetes
+
+
+**Development Tools:**
+
+- Git
+
+
+**Frameworks & Libraries:**
+
+- Node.js
+- React
+
+
+**ITSM & Methodologies:**
+
+- ITIL v4
+- Agile
+
+
+**Operating Systems:**
+
+- Linux
+
+
+**Programming Languages:**
+
+- Python
 - GraphQL
+- JavaScript
+
+
+**Soft Skills:**
+
+- Technical Consulting
+- Open-Source Advocate
 
 
 

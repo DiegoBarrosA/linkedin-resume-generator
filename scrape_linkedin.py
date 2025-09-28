@@ -17,6 +17,7 @@ Usage:
 import os
 import json
 import time
+import re
 import asyncio
 from typing import Dict, Any, Optional
 from datetime import datetime
@@ -268,79 +269,281 @@ class LinkedInScraper:
         return education
     
     async def scrape_skills(self, page: Page) -> list:
-        """Scrape skills section with endorsements and categories"""
+        """
+        Comprehensive skills scraper that tries multiple selectors and approaches
+        to extract ALL skills from LinkedIn profile
+        """
         skills = []
+        all_skill_names = set()  # Track unique skills
+        
         try:
-            skills_section = page.locator('section:has(h2:has-text("Skills"))')
-            if await skills_section.count() > 0:
-                # Try to click "Show all skills" if available
-                try:
-                    show_all_button = skills_section.locator('button:has-text("Show all")')
-                    if await show_all_button.count() > 0:
-                        await show_all_button.click()
-                        await page.wait_for_timeout(2000)
-                except:
-                    pass
+            print("Searching for skills section...")
+            
+            # Multiple possible selectors for skills section
+            skills_selectors = [
+                'section:has(h2:has-text("Skills"))',
+                'section[data-section="skills"]',
+                'section:has([data-field="skill_name"])',
+                'div:has(h2:text("Skills"))',
+                '.skills-section'
+            ]
+            
+            skills_section = None
+            for selector in skills_selectors:
+                potential_section = page.locator(selector)
+                if await potential_section.count() > 0:
+                    skills_section = potential_section.first
+                    print(f"Found skills section with selector: {selector}")
+                    break
+            
+            if not skills_section:
+                print("No skills section found, trying alternative approach...")
+                # Try to find skills anywhere on the page
+                await self.extract_skills_from_page_content(page, skills, all_skill_names)
+                return skills
+            
+            # Try to expand skills section
+            await self.expand_skills_section(skills_section)
+            
+            # Multiple approaches to extract skills
+            await self.extract_skills_method_1(skills_section, skills, all_skill_names)
+            await self.extract_skills_method_2(skills_section, skills, all_skill_names)
+            await self.extract_skills_method_3(skills_section, skills, all_skill_names)
+            
+            # If still no skills found, try broad text extraction
+            if not skills:
+                await self.extract_skills_from_page_content(page, skills, all_skill_names)
+            
+            # Auto-categorize skills
+            self.auto_categorize_skills(skills)
+            
+            print(f"Successfully extracted {len(skills)} unique skills")
+            
+        except Exception as e:
+            print(f"Error in comprehensive skills scraping: {e}")
+        
+        return skills
+    
+    async def expand_skills_section(self, skills_section):
+        """Try to expand/show all skills"""
+        try:
+            expand_buttons = [
+                'button:has-text("Show all")',
+                'button:has-text("See all")',
+                'button:has-text("View all")',
+                'button:has-text("Show more")',
+                'button[aria-label*="Show all"]',
+                'button[aria-label*="See all"]'
+            ]
+            
+            for button_selector in expand_buttons:
+                button = skills_section.locator(button_selector)
+                if await button.count() > 0:
+                    await button.click()
+                    await skills_section.page.wait_for_timeout(2000)
+                    print("Expanded skills section")
+                    break
+        except Exception as e:
+            print(f"Could not expand skills section: {e}")
+    
+    async def extract_skills_method_1(self, skills_section, skills, all_skill_names):
+        """Method 1: Standard LinkedIn skills structure"""
+        try:
+            skill_items = skills_section.locator('li')
+            count = await skill_items.count()
+            
+            for i in range(count):
+                item = skill_items.nth(i)
                 
-                skill_items = skills_section.locator('li.artdeco-list__item')
-                count = await skill_items.count()
+                # Try multiple selectors for skill names
+                name_selectors = [
+                    '.mr1.t-bold span[aria-hidden="true"]',
+                    'span[aria-hidden="true"]:first-child',
+                    '.skill-name',
+                    'h3',
+                    '.t-16.t-bold',
+                    'strong'
+                ]
                 
-                for i in range(min(count, 30)):  # Limit to top 30 skills
-                    item = skill_items.nth(i)
-                    skill_data = {}
-                    
-                    # Skill name
+                skill_name = ""
+                for selector in name_selectors:
                     try:
-                        name = await item.locator('.mr1.t-bold span[aria-hidden="true"]').first.text_content()
-                        skill_data['name'] = name.strip() if name else ""
+                        name_element = item.locator(selector).first
+                        if await name_element.count() > 0:
+                            skill_name = await name_element.text_content()
+                            if skill_name and skill_name.strip():
+                                skill_name = skill_name.strip()
+                                break
                     except:
-                        skill_data['name'] = ""
-                    
-                    # Endorsement count
-                    try:
-                        endorsements = await item.locator('.t-14.t-normal span[aria-hidden="true"]').text_content()
-                        if endorsements and 'endorsement' in endorsements.lower():
-                            # Extract number from endorsement text
-                            import re
-                            numbers = re.findall(r'\d+', endorsements)
-                            skill_data['endorsements'] = int(numbers[0]) if numbers else 0
-                        else:
-                            skill_data['endorsements'] = 0
-                    except:
-                        skill_data['endorsements'] = 0
-                    
-                    # Category (if available)
-                    try:
-                        # Skills might be grouped under categories
-                        category_header = item.locator('preceding-sibling::*').filter(has_text='span:has-text("Industry Knowledge")')
-                        if await category_header.count() > 0:
-                            skill_data['category'] = 'Industry Knowledge'
-                        else:
-                            skill_data['category'] = 'General'
-                    except:
-                        skill_data['category'] = 'General'
-                    
-                    if skill_data['name']:
-                        skills.append(skill_data)
+                        continue
                 
-                # If we couldn't get detailed skills, fall back to simple text extraction
-                if not skills:
-                    simple_skills = skills_section.locator('.mr1.t-bold span[aria-hidden="true"]')
-                    simple_count = await simple_skills.count()
+                if skill_name and skill_name.lower() not in all_skill_names:
+                    # Extract endorsements
+                    endorsements = await self.extract_endorsements(item)
                     
-                    for i in range(min(simple_count, 30)):
-                        skill = await simple_skills.nth(i).text_content()
-                        if skill and skill.strip():
+                    skills.append({
+                        'name': skill_name,
+                        'endorsements': endorsements,
+                        'category': 'General'
+                    })
+                    all_skill_names.add(skill_name.lower())
+                    
+        except Exception as e:
+            print(f"Method 1 failed: {e}")
+    
+    async def extract_skills_method_2(self, skills_section, skills, all_skill_names):
+        """Method 2: Alternative selectors"""
+        try:
+            # Look for any clickable elements that might be skills
+            skill_elements = skills_section.locator('button, a, span').filter(has_text=re.compile(r'^[A-Za-z][A-Za-z0-9\s\.\+\#\-]{1,30}$'))
+            count = await skill_elements.count()
+            
+            for i in range(min(count, 50)):  # Limit to prevent infinite loops
+                element = skill_elements.nth(i)
+                text = await element.text_content()
+                
+                if text and text.strip() and self.is_valid_skill_name(text.strip()):
+                    skill_name = text.strip()
+                    if skill_name.lower() not in all_skill_names:
+                        skills.append({
+                            'name': skill_name,
+                            'endorsements': 0,
+                            'category': 'General'
+                        })
+                        all_skill_names.add(skill_name.lower())
+                        
+        except Exception as e:
+            print(f"Method 2 failed: {e}")
+    
+    async def extract_skills_method_3(self, skills_section, skills, all_skill_names):
+        """Method 3: Text-based extraction"""
+        try:
+            # Get all text from skills section and parse it
+            section_text = await skills_section.text_content()
+            
+            if section_text:
+                # Split by common separators and extract potential skills
+                potential_skills = re.findall(r'\b[A-Za-z][A-Za-z0-9\s\.\+\#\-]{1,30}\b', section_text)
+                
+                for skill in potential_skills:
+                    skill = skill.strip()
+                    if self.is_valid_skill_name(skill) and skill.lower() not in all_skill_names:
+                        # Skip common words
+                        if not any(word in skill.lower() for word in ['skills', 'endorsement', 'show', 'see', 'view', 'all', 'more']):
                             skills.append({
-                                'name': skill.strip(),
+                                'name': skill,
                                 'endorsements': 0,
                                 'category': 'General'
                             })
+                            all_skill_names.add(skill.lower())
                             
         except Exception as e:
-            print(f"Error scraping skills: {e}")
+            print(f"Method 3 failed: {e}")
+    
+    async def extract_skills_from_page_content(self, page, skills, all_skill_names):
+        """Fallback: Extract skills from entire page content"""
+        try:
+            print("Trying to extract skills from page content...")
+            
+            # Get page content
+            page_content = await page.content()
+            
+            # Look for common skill patterns in the HTML
+            skill_patterns = [
+                r'"skill[^"]*"[^>]*>([^<]+)',
+                r'data-skill[^>]*>([^<]+)',
+                r'aria-label[^>]*skill[^>]*>([^<]+)',
+            ]
+            
+            for pattern in skill_patterns:
+                matches = re.findall(pattern, page_content, re.IGNORECASE)
+                for match in matches:
+                    skill_name = re.sub(r'<[^>]+>', '', match).strip()
+                    if self.is_valid_skill_name(skill_name) and skill_name.lower() not in all_skill_names:
+                        skills.append({
+                            'name': skill_name,
+                            'endorsements': 0,
+                            'category': 'General'
+                        })
+                        all_skill_names.add(skill_name.lower())
+                        
+        except Exception as e:
+            print(f"Page content extraction failed: {e}")
+    
+    async def extract_endorsements(self, item):
+        """Extract endorsement count from skill item"""
+        try:
+            endorsement_selectors = [
+                '.t-14.t-normal span[aria-hidden="true"]',
+                'span:contains("endorsement")',
+                '.endorsement-count'
+            ]
+            
+            for selector in endorsement_selectors:
+                element = item.locator(selector)
+                if await element.count() > 0:
+                    text = await element.text_content()
+                    if text and 'endorsement' in text.lower():
+                        numbers = re.findall(r'\d+', text)
+                        return int(numbers[0]) if numbers else 0
+            return 0
+        except:
+            return 0
+    
+    def is_valid_skill_name(self, name):
+        """Check if a string looks like a valid skill name"""
+        if not name or len(name) < 2 or len(name) > 50:
+            return False
         
-        return skills
+        # Skip common non-skill words
+        invalid_words = [
+            'skills', 'endorsement', 'endorsements', 'show', 'see', 'view', 'all', 'more',
+            'experience', 'years', 'year', 'month', 'months', 'day', 'days',
+            'click', 'button', 'link', 'page', 'profile', 'linkedin'
+        ]
+        
+        return not any(word in name.lower() for word in invalid_words)
+    
+    def auto_categorize_skills(self, skills):
+        """Automatically categorize skills based on common patterns"""
+        categories = {
+            "Programming Languages": [
+                'python', 'javascript', 'java', 'c++', 'c#', 'go', 'rust', 'typescript', 
+                'php', 'ruby', 'scala', 'kotlin', 'swift', 'r', 'sql', 'html', 'css'
+            ],
+            "Cloud & DevOps": [
+                'aws', 'azure', 'gcp', 'docker', 'kubernetes', 'jenkins', 'terraform', 
+                'ansible', 'ci/cd', 'devops', 'cloud'
+            ],
+            "Development Tools": [
+                'git', 'github', 'gitlab', 'bitbucket', 'vscode', 'intellij', 'postman'
+            ],
+            "Databases": [
+                'mysql', 'postgresql', 'mongodb', 'redis', 'elasticsearch', 'oracle'
+            ],
+            "Frameworks & Libraries": [
+                'react', 'vue', 'angular', 'node.js', 'express', 'django', 'flask', 'spring'
+            ],
+            "Atlassian": [
+                'atlassian', 'jira', 'confluence', 'bamboo', 'bitbucket', 'trello'
+            ],
+            "Methodologies": [
+                'agile', 'scrum', 'kanban', 'itil', 'lean', 'waterfall'
+            ]
+        }
+        
+        for skill in skills:
+            skill_name_lower = skill['name'].lower()
+            categorized = False
+            
+            for category, keywords in categories.items():
+                if any(keyword in skill_name_lower or skill_name_lower in keyword for keyword in keywords):
+                    skill['category'] = category
+                    categorized = True
+                    break
+            
+            if not categorized:
+                skill['category'] = 'Other'
     
     async def scrape_contact_info(self, page: Page) -> dict:
         """Scrape contact information"""

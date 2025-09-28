@@ -31,26 +31,6 @@
   ],
   "skills": [
     {
-      "name": "Python",
-      "endorsements": 0,
-      "category": "Programming Languages"
-    },
-    {
-      "name": "Docker",
-      "endorsements": 0,
-      "category": "Cloud & DevOps"
-    },
-    {
-      "name": "Git",
-      "endorsements": 0,
-      "category": "Development Tools"
-    },
-    {
-      "name": "ITIL v4",
-      "endorsements": 0,
-      "category": "ITSM & Methodologies"
-    },
-    {
       "name": "Atlassian",
       "endorsements": 0,
       "category": "Atlassian Ecosystem"
@@ -66,19 +46,15 @@
       "category": "Atlassian Ecosystem"
     },
     {
-      "name": "GraphQL",
+      "name": "Git",
       "endorsements": 0,
-      "category": "Programming Languages"
+      "category": "Cloud & DevOps",
+      "source": "headline"
     },
     {
-      "name": "Linux",
+      "name": "Docker",
       "endorsements": 0,
-      "category": "Operating Systems"
-    },
-    {
-      "name": "Agile",
-      "endorsements": 0,
-      "category": "ITSM & Methodologies"
+      "category": "Cloud & DevOps"
     },
     {
       "name": "CI/CD",
@@ -86,39 +62,69 @@
       "category": "Cloud & DevOps"
     },
     {
-      "name": "Technical Consulting",
+      "name": "Open",
       "endorsements": 0,
-      "category": "Soft Skills"
+      "category": "Development Tools",
+      "source": "headline"
     },
     {
-      "name": "Open-Source Advocate",
+      "name": "Git",
       "endorsements": 0,
-      "category": "Soft Skills"
+      "category": "Development Tools"
     },
     {
-      "name": "AWS",
+      "name": "ITIL v4",
       "endorsements": 0,
-      "category": "Cloud & DevOps"
+      "category": "ITSM & Methodologies",
+      "source": "headline"
     },
     {
-      "name": "Kubernetes",
+      "name": "ITIL v4",
       "endorsements": 0,
-      "category": "Cloud & DevOps"
+      "category": "ITSM & Methodologies"
     },
     {
-      "name": "JavaScript",
+      "name": "Agile",
+      "endorsements": 0,
+      "category": "ITSM & Methodologies"
+    },
+    {
+      "name": "Linux",
+      "endorsements": 0,
+      "category": "Operating Systems"
+    },
+    {
+      "name": "GraphQL",
       "endorsements": 0,
       "category": "Programming Languages"
     },
     {
-      "name": "Node.js",
+      "name": "Python",
       "endorsements": 0,
-      "category": "Frameworks & Libraries"
+      "category": "Programming Languages",
+      "source": "headline"
     },
     {
-      "name": "React",
+      "name": "Docker",
       "endorsements": 0,
-      "category": "Frameworks & Libraries"
+      "category": "Programming Languages",
+      "source": "headline"
+    },
+    {
+      "name": "Source Advocate",
+      "endorsements": 0,
+      "category": "Programming Languages",
+      "source": "headline"
+    },
+    {
+      "name": "Python",
+      "endorsements": 0,
+      "category": "Programming Languages"
+    },
+    {
+      "name": "Technical Consulting",
+      "endorsements": 0,
+      "category": "Soft Skills"
     }
   ],
   "contact": {
