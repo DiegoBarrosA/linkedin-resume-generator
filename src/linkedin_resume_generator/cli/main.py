@@ -133,12 +133,12 @@ async def _run_scrape(settings: Settings, profile_url: Optional[str], format: st
                     f.write(profile_data.json(indent=2))
                 console.print(f"[green]✅ JSON data saved to: {json_file}[/green]")
             
-            # Privacy processing if enabled
-            if settings.compliance.privacy_mode:
-                console.print("\n[cyan]Running privacy-safe processing...[/cyan]")
+            # Automatic cleanup if enabled
+            if settings.compliance.auto_cleanup:
+                console.print("\n[cyan]Running automatic data cleanup...[/cyan]")
                 processor = PrivacyProcessor(settings)
                 await processor.cleanup_raw_data()
-                console.print("[green]✅ Privacy processing completed[/green]")
+                console.print("[green]✅ Automatic cleanup completed - raw data purged[/green]")
         
         console.print("\n[bold green]🎉 Resume generation completed successfully![/bold green]")
         

@@ -11,9 +11,9 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class LinkedInCredentials(BaseModel):
     """LinkedIn authentication credentials."""
     
-    email: str = Field(..., description="LinkedIn login email")
-    password: str = Field(..., description="LinkedIn password") 
-    totp_secret: Optional[str] = Field(None, description="TOTP secret for 2FA")
+    email: str = Field(default="", description="LinkedIn login email")
+    password: str = Field(default="", description="LinkedIn password") 
+    totp_secret: Optional[str] = Field(default=None, description="TOTP secret for 2FA")
 
 
 class ScrapingConfig(BaseModel):
@@ -94,8 +94,8 @@ class Settings(BaseSettings):
     ci_mode: bool = Field(default=False, description="CI/non-interactive mode")
     debug: bool = Field(default=False, description="Enable debug mode")
     
-    # Credentials
-    linkedin: LinkedInCredentials
+    # Credentials  
+    linkedin: LinkedInCredentials = Field(default_factory=LinkedInCredentials)
     
     # Configuration sections
     scraping: ScrapingConfig = Field(default_factory=ScrapingConfig)
@@ -104,7 +104,7 @@ class Settings(BaseSettings):
     logging: LoggingConfig = Field(default_factory=LoggingConfig)
     
     # GitHub configuration
-    github_token: Optional[str] = Field(None, description="GitHub token for API access")
+    github_token: Optional[str] = Field(default=None, description="GitHub token for API access")
     github_pages_enabled: bool = Field(default=False, description="Enable GitHub Pages deployment")
     
     model_config = SettingsConfigDict(
@@ -117,18 +117,23 @@ class Settings(BaseSettings):
     @classmethod
     def from_env(cls) -> "Settings":
         """Create settings from environment variables and .env file."""
-        return cls(
-            linkedin=LinkedInCredentials(
-                email=os.getenv("LINKEDIN_EMAIL", ""),
-                password=os.getenv("LINKEDIN_PASSWORD", ""),
-                totp_secret=os.getenv("LINKEDIN_TOTP_SECRET")
-            ),
-            ci_mode=os.getenv("LINKEDIN_CI_MODE", "false").lower() == "true",
-            debug=os.getenv("DEBUG", "false").lower() == "true",
-            environment=os.getenv("ENVIRONMENT", "production"),
-            github_token=os.getenv("GITHUB_TOKEN"),
-            github_pages_enabled=os.getenv("GITHUB_PAGES_ENABLED", "false").lower() == "true",
-        )
+        # Create base settings using BaseSettings functionality
+        settings = cls()
+        
+        # Handle backwards compatibility for legacy environment variable names
+        # LinkedIn credentials with LINKEDIN_* prefix (legacy format)
+        if os.getenv("LINKEDIN_EMAIL"):
+            settings.linkedin.email = os.getenv("LINKEDIN_EMAIL", "")
+        if os.getenv("LINKEDIN_PASSWORD"):
+            settings.linkedin.password = os.getenv("LINKEDIN_PASSWORD", "")  
+        if os.getenv("LINKEDIN_TOTP_SECRET"):
+            settings.linkedin.totp_secret = os.getenv("LINKEDIN_TOTP_SECRET")
+            
+        # CI Mode with LINKEDIN_CI_MODE prefix (legacy format)
+        if os.getenv("LINKEDIN_CI_MODE"):
+            settings.ci_mode = os.getenv("LINKEDIN_CI_MODE", "false").lower() == "true"
+        
+        return settings
     
     @field_validator("environment")
     @classmethod

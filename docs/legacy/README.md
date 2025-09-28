@@ -1,6 +1,6 @@
 # LinkedIn Resume Generator
 
-An automated system that scrapes **ANY** LinkedIn profile and generates a professional resume hosted on GitHub Pages.
+An automated system that scrapes **your own** LinkedIn profile and generates a professional resume hosted on GitHub Pages.
 
 ## ⚠️ **CRITICAL LEGAL COMPLIANCE**
 
@@ -36,7 +36,7 @@ This tool includes automatic compliance features:
 
 ## 🚀 Features
 
-- **Universal LinkedIn Scraping**: Automatically extracts ALL skills and data from any LinkedIn profile
+- **Personal Profile Scraping**: Automatically extracts ALL skills and data from your own LinkedIn profile
 - **Zero Configuration**: No hardcoded skills or manual data entry required
 - **Intelligent Categorization**: Automatically organizes skills by technology domains
 - **TOTP Authentication Support**: Handles LinkedIn 2FA with TOTP codes
@@ -44,13 +44,13 @@ This tool includes automatic compliance features:
 - **Professional Resume Generation**: Creates beautifully formatted markdown resumes
 - **GitHub Pages Hosting**: Automatically deploys your resume to a public webpage
 - **Weekly Auto-Updates**: GitHub Actions runs weekly to keep your resume current
-- **Reusable for Anyone**: Clone, configure credentials, and run - works for any LinkedIn profile
+- **Personal Use Tool**: Clone, configure your own credentials, and generate your personal resume
 
 ## ✨ Why This is Better
 
-### 🎯 **Truly Universal**
+### 🎯 **Personalized for You**
 - **No Hardcoding**: Automatically extracts ALL skills from your actual LinkedIn profile
-- **Works for Everyone**: Any LinkedIn profile, any skill set, any industry
+- **Works for Your Profile**: Handles your LinkedIn profile with any skill set or industry
 - **Adaptive**: Handles different LinkedIn layouts and profile structures
 - **Smart Categorization**: Automatically organizes skills into relevant categories
 - **Complete Extraction**: Gets skills, endorsements, experience, education, certifications, projects, and more

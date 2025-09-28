@@ -2,6 +2,7 @@
 
 import re
 from typing import List, Set, Dict, Any
+from urllib.parse import urlparse
 from playwright.async_api import Page, ElementHandle
 
 from ..models.profile import Skill, SkillCategory
@@ -135,12 +136,35 @@ class SkillExtractor:
             raise ScrapingError(f"Skill extraction failed: {e}")
     
     async def _ensure_profile_page(self, page: Page) -> None:
-        """Ensure we're on the profile page."""
+        """Ensure we're on a valid LinkedIn profile page."""
         current_url = page.url
-        if "/in/" not in current_url:
-            # Navigate to profile page
-            await page.goto(f"{current_url.split('/')[0]}//{current_url.split('/')[2]}/in/")
-            await page.wait_for_load_state("networkidle")
+        
+        # Check for invalid starting URLs
+        if not current_url or current_url == "about:blank":
+            raise ScrapingError("No starting URL available - page is blank or empty")
+        
+        # Parse the URL to extract components safely
+        try:
+            parsed_url = urlparse(current_url)
+        except Exception as e:
+            raise ScrapingError(f"Invalid URL format: {current_url}")
+        
+        # Validate that we're on LinkedIn
+        if not parsed_url.netloc.endswith('linkedin.com'):
+            raise ScrapingError(f"Not a LinkedIn URL: {current_url}")
+        
+        # Check if we're already on a valid profile page
+        path_parts = parsed_url.path.strip('/').split('/')
+        if len(path_parts) >= 2 and path_parts[0] == 'in' and path_parts[1]:
+            # Already on a valid "/in/<slug>" path with non-empty slug
+            return
+        
+        # If we're not on a valid profile path, raise an error
+        # Don't attempt to construct a bare "/in/" path
+        raise ScrapingError(
+            f"Current URL does not point to a valid LinkedIn profile (/in/<slug> pattern). "
+            f"Please provide a concrete profile URL. Current URL: {current_url}"
+        )
     
     async def _extract_from_skills_section(self, page: Page) -> List[Skill]:
         """Extract skills from the dedicated skills section."""
@@ -243,10 +267,15 @@ class SkillExtractor:
                 count_element = await element.query_selector(selector)
                 if count_element:
                     count_text = await count_element.text_content()
-                    # Extract number from text like "99+ endorsements"
-                    match = re.search(r"(\d+)", count_text or "")
-                    if match:
-                        return int(match.group(1))
+                    # Extract number from text like "99+ endorsements", "1,234 endorsements", "12 345 endorsements"
+                    if count_text:
+                        # Remove all non-digit characters (commas, spaces, plus signs, etc.)
+                        cleaned_digits = re.sub(r'[^\d]', '', count_text)
+                        if cleaned_digits:
+                            try:
+                                return int(cleaned_digits)
+                            except ValueError:
+                                pass  # Fall through to continue trying other selectors
             
             return 0
             
@@ -303,22 +332,93 @@ class SkillExtractor:
         return skills
     
     def _extract_skills_from_text(self, text: str, source: str) -> List[Skill]:
-        """Extract known skills from text content."""
+        """Extract known skills from text content using word boundary matching."""
         skills = []
         text_lower = text.lower()
         
-        # Look for known skills in the text
+        # Look for known skills in the text using regex word boundaries
         for skill_name, category in self._skill_categories.items():
-            if skill_name in text_lower:
-                skills.append(Skill(
-                    name=skill_name.title(),
-                    category=category,
-                    endorsements=0,
-                    source=source,
-                    confidence=0.8  # Lower confidence for text extraction
-                ))
+            # Escape the skill name for safe regex usage
+            escaped_skill = re.escape(skill_name.lower())
+            
+            # Use sophisticated boundary detection to avoid false positives
+            if re.match(r'^[a-zA-Z][a-zA-Z0-9]*$', skill_name):
+                # Pure alphanumeric skill starting with letter - use strict word boundaries
+                pattern = rf'\b{escaped_skill}\b'
+            elif re.match(r'^[\w\s.+-]+$', skill_name):
+                # Skill with common symbols - use word/non-word boundaries
+                pattern = rf'(?<!\w){escaped_skill}(?!\w)'
+            else:
+                # Complex skill with special characters - use non-alphanumeric boundaries
+                pattern = rf'(?<![a-zA-Z0-9]){escaped_skill}(?![a-zA-Z0-9])'
+            
+            # Perform case-insensitive search
+            matches = list(re.finditer(pattern, text_lower, re.IGNORECASE))
+            if matches:
+                # Additional context filtering for common ambiguous terms
+                should_include = True
+                
+                # Apply context-based filtering for highly ambiguous single-letter or common words
+                if skill_name.lower() in ['go', 'python'] and category == 'Programming':
+                    should_include = self._is_programming_context(text_lower, matches, skill_name.lower())
+                
+                if should_include:
+                    skills.append(Skill(
+                        name=skill_name.title(),
+                        category=category,
+                        endorsements=0,
+                        source=source,
+                        confidence=0.8  # Lower confidence for text extraction
+                    ))
         
         return skills
+    
+    def _is_programming_context(self, text: str, matches: List, skill_name: str) -> bool:
+        """Check if the skill mention appears in a programming context."""
+        # Programming context indicators
+        programming_indicators = [
+            'programming', 'language', 'code', 'coding', 'development', 'developer',
+            'software', 'script', 'scripting', 'framework', 'library', 'api',
+            'backend', 'frontend', 'fullstack', 'engineer', 'engineering',
+            'application', 'system', 'database', 'web', 'mobile', 'app'
+        ]
+        
+        # Exclude patterns that indicate non-programming context
+        exclude_patterns = [
+            r"let'?s\s+go\s+to",  # "let's go to"
+            r"go\s+to\s+",        # "go to"
+            r"monty\s+python",    # "monty python"
+            r"python\s+(movie|film|show)"  # "python movie/film/show"
+        ]
+        
+        for match in matches:
+            start, end = match.span()
+            
+            # First check for exclusion patterns in wider context
+            context_start = max(0, start - 20)
+            context_end = min(len(text), end + 20)
+            wide_context = text[context_start:context_end]
+            
+            # If any exclude pattern matches, skip this occurrence
+            if any(re.search(pattern, wide_context, re.IGNORECASE) for pattern in exclude_patterns):
+                continue
+            
+            # Check programming context around the match (±50 characters)
+            context_start = max(0, start - 50)
+            context_end = min(len(text), end + 50)
+            context = text[context_start:context_end]
+            
+            # If any programming indicator is found in the context, include it
+            if any(indicator in context for indicator in programming_indicators):
+                return True
+            
+            # Special case: if it's "Go" followed by technical terms
+            if skill_name == 'go':
+                go_context = text[start:min(len(text), end + 30)]
+                if any(term in go_context for term in ['team', 'lang', 'google', 'programming', 'dev']):
+                    return True
+        
+        return False
     
     def _is_valid_skill_name(self, name: str) -> bool:
         """Validate if a skill name is valid."""

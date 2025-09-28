@@ -7,13 +7,28 @@ from pathlib import Path
 readme_path = Path(__file__).parent / "README.md"
 long_description = readme_path.read_text(encoding="utf-8") if readme_path.exists() else ""
 
-# Read requirements
+# Read requirements and separate runtime from dev dependencies
 requirements_path = Path(__file__).parent / "requirements.txt"
 requirements = []
+dev_packages = {
+    'pytest', 'pytest-asyncio', 'pytest-mock', 'pytest-cov',
+    'black', 'isort', 'flake8', 'mypy', 'pre-commit', 'tox',
+    'coverage', 'bandit', 'safety'
+}
+
 if requirements_path.exists():
-    requirements = requirements_path.read_text().strip().split('\n')
+    all_requirements = requirements_path.read_text().strip().split('\n')
     # Filter out comments and empty lines
-    requirements = [req.strip() for req in requirements if req.strip() and not req.startswith('#')]
+    all_requirements = [req.strip() for req in all_requirements if req.strip() and not req.startswith('#')]
+    
+    # Split runtime and dev requirements
+    for req in all_requirements:
+        # Extract package name (handle version specifiers like ==, >=, etc.)
+        package_name = req.split('==')[0].split('>=')[0].split('<=')[0].split('~=')[0].split('!=')[0].strip()
+        
+        # Only include non-dev packages in runtime requirements
+        if package_name.lower() not in dev_packages:
+            requirements.append(req)
 
 setup(
     name="linkedin-resume-generator",

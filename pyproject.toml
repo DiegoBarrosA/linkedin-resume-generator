@@ -12,7 +12,7 @@ authors = [
 ]
 description = "Professional resume generator from LinkedIn profiles with compliance safeguards"
 readme = "README.md"
-license = {text = "MIT"}
+license = {file = "LICENSE"}
 requires-python = ">=3.8"
 classifiers = [
     "Development Status :: 4 - Beta",
