@@ -72,6 +72,10 @@ jobs:
         
         # Run scraping and immediate privacy-safe processing in one step
         # This minimizes the time raw data exists and ensures cleanup
+        
+        # Set CI environment flag to bypass interactive confirmation
+        export LINKEDIN_CI_MODE=true
+        
         python scrape_linkedin.py
         python privacy_safe_processor.py << 'EOF'
         y

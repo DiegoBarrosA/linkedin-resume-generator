@@ -1006,7 +1006,15 @@ async def main():
     print()
     
     # User confirmation with compliance acknowledgment
-    confirm = input("Confirm this is YOUR OWN LinkedIn account and you understand the legal requirements (y/n): ").lower().strip()
+    ci_mode = os.getenv('LINKEDIN_CI_MODE', '').lower() == 'true'
+    
+    if ci_mode:
+        print("🤖 CI Mode: Auto-confirming compliance for automated execution")
+        print("✅ Operating under assumption this is the repository owner's own LinkedIn profile")
+        confirm = 'y'
+    else:
+        confirm = input("Confirm this is YOUR OWN LinkedIn account and you understand the legal requirements (y/n): ").lower().strip()
+        
     if confirm != 'y':
         print("❌ This tool can only be used with your own LinkedIn profile.")
         print("❌ You must acknowledge compliance requirements to proceed.")
