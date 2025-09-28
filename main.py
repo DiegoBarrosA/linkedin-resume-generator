@@ -134,12 +134,32 @@ async def run_legacy():
 if __name__ == "__main__":
     # Check if running as CLI with arguments
     if len(sys.argv) > 1:
-        # Try to use the new CLI
-        try:
-            from linkedin_resume_generator.cli.main import cli
-            cli()
-        except ImportError:
-            print("New CLI not available. Use 'python main.py' for legacy interface.")
+        # Try to use the new CLI if modern modules are available
+        if MODERN_MODULES_AVAILABLE:
+            try:
+                from linkedin_resume_generator.cli.main import cli
+                cli()
+            except ImportError as e:
+                print(f"❌ CLI import failed: {e}")
+                print("💡 This might be due to missing dependencies (click, rich)")
+                print("📝 Try: pip install click rich")
+                print("🔄 Falling back to legacy interface...")
+                
+                # Try to run legacy mode with the same arguments
+                if len(sys.argv) >= 2 and sys.argv[1] == "scrape":
+                    print("🚀 Running legacy scrape mode...")
+                    # Remove CLI arguments and run main
+                    sys.argv = [sys.argv[0]]  # Keep only script name
+                    asyncio.run(main())
+                else:
+                    print("New CLI not available. Use 'python main.py' (no args) for legacy interface.")
+                    sys.exit(1)
+            except Exception as e:
+                print(f"❌ CLI execution failed: {e}")
+                sys.exit(1)
+        else:
+            print("❌ Modern modules not available. CLI cannot run.")
+            print("New CLI not available. Use 'python main.py' (no args) for legacy interface.")
             sys.exit(1)
     else:
         # Run the main application
