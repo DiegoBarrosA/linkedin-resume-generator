@@ -30,12 +30,40 @@
     }
   ],
   "skills": [
-    "Atlassian",
-    "GraphQL"
+    {
+      "name": "Atlassian",
+      "endorsements": 0,
+      "category": "General"
+    },
+    {
+      "name": "GraphQL",
+      "endorsements": 0,
+      "category": "General"
+    }
   ],
   "contact": {
     "linkedin_url": "https://www.linkedin.com/in/me/"
   },
-  "scraped_at": "2025-09-28T18:44:19.707181",
+  "certifications": [
+    {
+      "name": "Agile At Scale Sales Accreditation 2024-2025",
+      "issuer": "Atlassian",
+      "date": "Issued Oct 2024 · Expires Oct 2025",
+      "credential_id": ""
+    },
+    {
+      "name": "Cloud Migration Delivery Accreditation 2024",
+      "issuer": "Atlassian",
+      "date": "Issued Oct 2024 · Expires Oct 2025",
+      "credential_id": ""
+    }
+  ],
+  "languages": [],
+  "projects": [],
+  "volunteer_experience": [],
+  "honors_awards": [],
+  "publications": [],
+  "recommendations": [],
+  "scraped_at": "2025-09-28T18:59:00.620599",
   "scraper_version": "1.0.0"
 }

@@ -5,20 +5,39 @@ title: Resume
 
 # Diego Pablo Barros Araya
 
-Senior IT Engineer & Technical Consultant | Atlassian Certified Expert (ACP-EE) | ITIL v4 | Python | Docker | Git | Open-Source Advocate
-
-📍 Santiago, Santiago Metropolitan Region, Chile
-🔗 [LinkedIn Profile](https://www.linkedin.com/in/me/)
+**Senior IT Engineer & Technical Consultant | Atlassian Certified Expert (ACP-EE) | ITIL v4 | Python | Docker | Git | Open-Source Advocate**
 
 ---
 
-## About
+## Contact Information
+
+
+
+ | 📍 Santiago, Santiago Metropolitan Region, Chile
+ | 🔗 [LinkedIn](https://www.linkedin.com/in/me/)
+
+---
+
+## Professional Summary
 
 
 
 ---
 
-## Experience
+## Core Competencies & Skills
+
+
+
+
+
+- Atlassian
+- GraphQL
+
+
+
+---
+
+## Professional Experience
 
 
 ### ServiceRocket
@@ -48,25 +67,37 @@ Selling Xiaomi Smartphones and ecosystem, assisting clients making recommendatio
 
 
 
----
-
-## Skills
-
-
-- Atlassian
-
-- GraphQL
-
 
 ---
 
-## Contact
+## Licenses & Certifications
 
 
-- **LinkedIn**: [https://www.linkedin.com/in/me/](https://www.linkedin.com/in/me/)
+### Agile At Scale Sales Accreditation 2024-2025
+**Atlassian** | Issued Oct 2024 · Expires Oct 2025
+
+
+
+### Cloud Migration Delivery Accreditation 2024
+**Atlassian** | Issued Oct 2024 · Expires Oct 2025
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 ---
 
-*Last updated: September 28, 2025*
-*Generated from LinkedIn profile data*
+*Last updated: September 28, 2025*  
+*Generated automatically from LinkedIn profile data*
