@@ -1,142 +1,32 @@
 # Diego Pablo Barros Araya
-
-**Senior IT Engineer & Technical Consultant | Atlassian Certified Expert (ACP-EE) | ITIL v4 | Python | Docker | Git | Open-Source Advocate**
-
----
+## Senior IT Engineer & Technical Consultant | Atlassian Certified Expert (ACP-EE) | ITIL v4 | Python | Docker | Git | Open-Source Advocate
 
 ## Contact Information
+- **Email:** contact@diegobarrosaraya.com
+- **Location:** Santiago, Santiago Metropolitan Region, Chile
+- **LinkedIn:** https://www.linkedin.com/in/diegobarrosaraya
 
-
-
- | 📍 Santiago, Santiago Metropolitan Region, Chile
- | 🔗 [LinkedIn](https://www.linkedin.com/in/me/)
-
----
-
-## Professional Summary
-
-
-
----
-
-## Core Competencies & Skills
-
-
-
-**Atlassian Ecosystem:**
-
-- Atlassian
-- Jira
-- Confluence
-
-
-**Cloud & DevOps:**
-
-- Docker
-- CI/CD
-- AWS
-- Kubernetes
-
-
-**Development Tools:**
-
-- Git
-
-
-**Frameworks & Libraries:**
-
-- Node.js
-- React
-
-
-**ITSM & Methodologies:**
-
-- ITIL v4
-- Agile
-
-
-**Operating Systems:**
-
-- Linux
-
-
-**Programming Languages:**
-
-- Python
-- GraphQL
-- JavaScript
-
-
-**Soft Skills:**
-
-- Technical Consulting
-- Open-Source Advocate
-
-
-
----
+## Summary
+With a strong foundation in computer science and over a decade of experience as a Linux user, I focus on implementing scalable, automated solutions in cloud-native environments (Docker, OCI) and embedded systems. My expertise also includes Atlassian products, and I have a proven track record of executing technical projects and collaborating with global technology teams to deliver efficient, high-performance IT solutions. As a Senior Engineer, I bring a track record of leading technical teams, driving project execution, and managing stakeholders in high-impact environments. My consulting experience has allowed me to collaborate with global technology leaders, helping them streamline workflows, enhance productivity, and achieve strategic IT goals. Beyond my professional work, I'm an avid explorer of both legacy Unix systems and cutting-edge Linux distributions, driven by a passion for open-source technology and continuous learning.
 
 ## Professional Experience
+### Senior IT Engineer & Technical Consultant at Freelance
+*Chile*
+*2020 - Present*
 
+With a strong foundation in computer science and over a decade of experience as a Linux user, I focus on implementing scalable, automated solutions in cloud-native environments (Docker, OCI) and embedded systems. My expertise also includes Atlassian products, and I have a proven track record of executing technical projects and collaborating with global technology teams to deliver efficient, high-performance IT solutions.
 
-### ServiceRocket
-**2 yrs 9 mos** | Santiago, Santiago Metropolitan Region, Chile · Remote
+**Skills:** Docker, Linux, Atlassian, Python, DevOps, Cloud Computing
 
+## Skills
+### Other
+Docker, Linux, Python, Git, Atlassian, Jira, Confluence, AWS, Kubernetes, CI/CD, Node.js, React, DevOps, Open Source
 
+## Certifications
+### Atlassian Certified Professional - Enterprise (ACP-EE)
+**Atlassian**
+*Issued: 2024*
 
-
-### Sales Consultant
-**Xiaomi Technology · Part-time** | Jan 2022 - Apr 2022 · 4 mos
-
-Selling Xiaomi Smartphones and ecosystem, assisting clients making recommendations, ensuring stock of products, managing checkout, unboxing, review and delivery of purchased products.
-
-
-
----
-
-## Education
-
-
-### Bachelor of Engineering - BE, Computer Software Engineering
-**Duoc UC** | Aug 2024 - Nov 2025
-
-
-### Associate's degree, Computer Programming/Programmer, General
-**Duoc UC** | Jan 2021 - Jul 2023
-
-
-
-
----
-
-## Licenses & Certifications
-
-
-### Agile At Scale Sales Accreditation 2024-2025
-**Atlassian** | Issued Oct 2024 · Expires Oct 2025
-
-
-
-### Cloud Migration Delivery Accreditation 2024
-**Atlassian** | Issued Oct 2024 · Expires Oct 2025
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
----
-
-*Last updated: September 28, 2025*  
-*Generated automatically from LinkedIn profile data*
+### ITIL v4 Foundation
+**AXELOS**
+*Issued: 2024*
