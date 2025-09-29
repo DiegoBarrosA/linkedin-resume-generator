@@ -263,11 +263,282 @@ class ResumeGenerator:
         timestamp: str,
         template: Optional[str] = None
     ) -> Path:
-        """Generate ATS-optimized PDF resume from markdown content."""
+        """Generate ATS-optimized PDF resume using markdown2 + weasyprint for GitHub Actions compatibility."""
         filename = f"resume_{timestamp}.pdf"
         output_path = self.output_dir / filename
         
-        # First, generate the markdown content
+        # Generate the markdown content
+        markdown_content = self._create_markdown_content(profile_data)
+        
+        try:
+            # Try markdown2 + ReportLab first (most reliable)
+            return await self._generate_pdf_markdown2(markdown_content, output_path)
+        except ImportError:
+            logger.info("markdown2 not available, trying weasyprint...")
+            try:
+                return await self._generate_pdf_weasyprint(markdown_content, output_path)
+            except (ImportError, OSError) as e:
+                logger.info(f"WeasyPrint not available ({e}), trying pdfkit...")
+                try:
+                    return await self._generate_pdf_pdfkit(markdown_content, output_path)
+                except ImportError:
+                    logger.info("PDFKit not available, falling back to basic ReportLab...")
+                    return await self._generate_pdf_fallback(profile_data, timestamp)
+    
+    async def _generate_pdf_markdown2(self, markdown_content: str, output_path: Path) -> Path:
+        """Generate PDF using markdown2 + ReportLab (most reliable option)."""
+        try:
+            import markdown2
+            from reportlab.lib.pagesizes import letter
+            from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
+            from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+            from reportlab.lib.enums import TA_LEFT
+            import re
+        except ImportError as e:
+            raise ImportError(f"markdown2 and reportlab required: {e}")
+        
+        # Try to use BeautifulSoup for better HTML parsing, fall back to regex
+        try:
+            from bs4 import BeautifulSoup
+            use_bs4 = True
+        except ImportError:
+            use_bs4 = False
+            logger.info("BeautifulSoup not available, using simple text parsing")
+        
+        # Convert markdown to clean text, preserving formatting cues
+        html_content = markdown2.markdown(markdown_content)
+        
+        # Create PDF document
+        doc = SimpleDocTemplate(
+            str(output_path), 
+            pagesize=letter,
+            leftMargin=72, rightMargin=72,
+            topMargin=72, bottomMargin=72
+        )
+        story = []
+        
+        # ATS-optimized styles
+        styles = getSampleStyleSheet()
+        
+        title_style = ParagraphStyle(
+            'ATSTitle', parent=styles['Normal'],
+            fontSize=16, spaceAfter=12, alignment=TA_LEFT,
+            fontName='Helvetica-Bold'
+        )
+        
+        heading_style = ParagraphStyle(
+            'ATSHeading', parent=styles['Normal'],
+            fontSize=12, spaceBefore=12, spaceAfter=6,
+            fontName='Helvetica-Bold'
+        )
+        
+        body_style = ParagraphStyle(
+            'ATSBody', parent=styles['Normal'],
+            fontSize=10, spaceAfter=4, fontName='Helvetica'
+        )
+        
+        if use_bs4:
+            # Parse the HTML and extract clean content
+            soup = BeautifulSoup(html_content, 'html.parser')
+            
+            for element in soup.find_all(['h1', 'h2', 'h3', 'p', 'ul', 'li']):
+                text = element.get_text().strip()
+                if not text:
+                    continue
+                    
+                if element.name == 'h1':
+                    story.append(Paragraph(text, title_style))
+                elif element.name == 'h2':
+                    story.append(Paragraph(text.upper(), heading_style))
+                elif element.name == 'h3':
+                    story.append(Paragraph(text, body_style))
+                elif element.name == 'li':
+                    story.append(Paragraph(f"• {text}", body_style))
+                elif element.name == 'p':
+                    story.append(Paragraph(text, body_style))
+        else:
+            # Simple regex-based parsing as fallback
+            def clean_html_tags(text: str) -> str:
+                """Remove HTML tags and decode entities."""
+                text = re.sub(r'<[^>]+>', '', text)
+                text = text.replace('&amp;', '&').replace('&lt;', '<').replace('&gt;', '>')
+                return text.strip()
+            
+            # Parse line by line
+            for line in html_content.split('\n'):
+                line = line.strip()
+                if not line:
+                    continue
+                    
+                if line.startswith('<h1>'):
+                    text = clean_html_tags(line)
+                    if text:
+                        story.append(Paragraph(text, title_style))
+                elif line.startswith('<h2>'):
+                    text = clean_html_tags(line)
+                    if text:
+                        story.append(Paragraph(text.upper(), heading_style))
+                elif line.startswith('<h3>'):
+                    text = clean_html_tags(line)
+                    if text:
+                        story.append(Paragraph(text, body_style))
+                elif line.startswith('<li>'):
+                    text = clean_html_tags(line)
+                    if text:
+                        story.append(Paragraph(f"• {text}", body_style))
+                elif line.startswith('<p>'):
+                    text = clean_html_tags(line)
+                    if text:
+                        story.append(Paragraph(text, body_style))
+        
+        # Build PDF
+        doc.build(story)
+        
+        logger.info(f"Generated ATS-optimized PDF using markdown2+ReportLab: {output_path}")
+        return output_path
+
+    async def _generate_pdf_weasyprint(self, markdown_content: str, output_path: Path) -> Path:
+        """Generate PDF using WeasyPrint (GitHub Actions friendly)."""
+        try:
+            import markdown2
+            from weasyprint import HTML, CSS
+        except ImportError:
+            raise ImportError("WeasyPrint and markdown2 required: pip install weasyprint markdown2")
+        
+        # Convert markdown to HTML with proper formatting
+        html_content = markdown2.markdown(
+            markdown_content,
+            extras=['fenced-code-blocks', 'tables', 'break-on-newline']
+        )
+        
+        # Add ATS-optimized CSS
+        css_content = """
+        @page {
+            size: letter;
+            margin: 1in;
+        }
+        body {
+            font-family: Arial, Helvetica, sans-serif;
+            font-size: 11pt;
+            line-height: 1.4;
+            color: black;
+            max-width: none;
+        }
+        h1 {
+            font-size: 16pt;
+            font-weight: bold;
+            margin-bottom: 0.5em;
+            page-break-after: avoid;
+        }
+        h2 {
+            font-size: 12pt;
+            font-weight: bold;
+            margin-top: 1em;
+            margin-bottom: 0.3em;
+            page-break-after: avoid;
+        }
+        h3 {
+            font-size: 11pt;
+            font-weight: bold;
+            margin-top: 0.8em;
+            margin-bottom: 0.2em;
+            page-break-after: avoid;
+        }
+        p, li {
+            margin-bottom: 0.2em;
+        }
+        ul {
+            padding-left: 1em;
+            margin: 0.3em 0;
+        }
+        strong {
+            font-weight: bold;
+        }
+        em {
+            font-style: italic;
+        }
+        """
+        
+        # Wrap in full HTML document
+        full_html = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="utf-8">
+            <title>Resume</title>
+        </head>
+        <body>
+            {html_content}
+        </body>
+        </html>
+        """
+        
+        # Generate PDF
+        HTML(string=full_html).write_pdf(
+            str(output_path),
+            stylesheets=[CSS(string=css_content)]
+        )
+        
+        logger.info(f"Generated ATS-optimized PDF resume using WeasyPrint: {output_path}")
+        return output_path
+    
+    async def _generate_pdf_pdfkit(self, markdown_content: str, output_path: Path) -> Path:
+        """Generate PDF using pdfkit (wkhtmltopdf wrapper)."""
+        try:
+            import markdown2
+            import pdfkit
+        except ImportError:
+            raise ImportError("PDFKit and markdown2 required: pip install pdfkit markdown2")
+        
+        # Convert markdown to HTML
+        html_content = markdown2.markdown(
+            markdown_content,
+            extras=['fenced-code-blocks', 'tables']
+        )
+        
+        # Add simple styling
+        styled_html = f"""
+        <html>
+        <head>
+            <style>
+                body {{ font-family: Arial, sans-serif; font-size: 11pt; line-height: 1.4; }}
+                h1 {{ font-size: 16pt; }}
+                h2 {{ font-size: 12pt; margin-top: 1em; }}
+                h3 {{ font-size: 11pt; }}
+            </style>
+        </head>
+        <body>
+            {html_content}
+        </body>
+        </html>
+        """
+        
+        # PDF options for ATS compatibility
+        options = {
+            'page-size': 'Letter',
+            'margin-top': '1in',
+            'margin-right': '1in',
+            'margin-bottom': '1in',
+            'margin-left': '1in',
+            'encoding': "UTF-8",
+            'no-outline': None
+        }
+        
+        pdfkit.from_string(styled_html, str(output_path), options=options)
+        
+        logger.info(f"Generated ATS-optimized PDF resume using PDFKit: {output_path}")
+        return output_path
+    
+    async def _generate_pdf_fallback(
+        self,
+        profile_data: ProfileData,
+        timestamp: str
+    ) -> Path:
+        """Fallback PDF generation using ReportLab when Pandoc is not available."""
+        filename = f"resume_{timestamp}.pdf"
+        output_path = self.output_dir / filename
+        
+        # Generate the markdown content
         markdown_content = self._create_markdown_content(profile_data)
         
         try:
@@ -320,9 +591,17 @@ class ResumeGenerator:
             fontName='Helvetica'
         )
         
+        def clean_markdown_formatting(text: str) -> str:
+            """Remove markdown formatting for ATS compatibility."""
+            import re
+            # Remove bold formatting but keep the text
+            text = re.sub(r'\*\*(.*?)\*\*', r'\1', text)
+            # Remove italic formatting but keep the text
+            text = re.sub(r'\*(.*?)\*', r'\1', text)
+            return text
+        
         # Parse markdown and convert to ATS-friendly format
         lines = markdown_content.split('\n')
-        current_section = None
         
         for line in lines:
             line = line.strip()
@@ -332,39 +611,30 @@ class ResumeGenerator:
             # Handle headers
             if line.startswith('# '):
                 # Main title (name)
-                story.append(Paragraph(line[2:], title_style))
+                clean_title = clean_markdown_formatting(line[2:])
+                story.append(Paragraph(clean_title, title_style))
             elif line.startswith('## '):
                 # Section headers
-                current_section = line[3:]
+                current_section = clean_markdown_formatting(line[3:])
                 story.append(Paragraph(current_section.upper(), heading_style))
             elif line.startswith('### '):
                 # Subsection headers (job titles, etc.)
-                story.append(Paragraph(line[4:], body_style))
+                clean_subtitle = clean_markdown_formatting(line[4:])
+                story.append(Paragraph(clean_subtitle, body_style))
             elif line.startswith('- '):
                 # List items - convert to simple text for ATS compatibility
-                skill_text = line[2:]
+                skill_text = clean_markdown_formatting(line[2:])
                 story.append(Paragraph(f"• {skill_text}", body_style))
-            elif line.startswith('*') and line.endswith('*'):
-                # Italic text (dates, locations)
-                clean_text = line.strip('*')
-                story.append(Paragraph(clean_text, body_style))
-            elif line.startswith('**') and line.endswith('**'):
-                # Bold text
-                clean_text = line.strip('*')
-                story.append(Paragraph(clean_text, body_style))
-            elif line.startswith('**') and ':' in line:
-                # Bold labels (like "Skills:")
-                clean_text = line.replace('**', '').replace(':', '')
-                story.append(Paragraph(clean_text, body_style))
             else:
-                # Regular paragraph text
+                # Regular paragraph text - clean all markdown formatting
                 if line:
-                    story.append(Paragraph(line, body_style))
+                    clean_text = clean_markdown_formatting(line)
+                    story.append(Paragraph(clean_text, body_style))
         
         # Build PDF
         doc.build(story)
         
-        logger.info(f"Generated ATS-optimized PDF resume: {output_path}")
+        logger.info(f"Generated fallback PDF resume: {output_path}")
         return output_path
 
 
