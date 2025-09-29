@@ -269,7 +269,7 @@ class ResumeGenerator:
         
         try:
             from reportlab.lib.pagesizes import letter, A4
-            from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
+            from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, ListFlowable, ListItem
             from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
             from reportlab.lib.units import inch
             from reportlab.lib import colors
@@ -383,8 +383,10 @@ class ResumeGenerator:
                 
                 # Skills
                 if exp.skills:
-                    skills_text = f"Skills: {', '.join(exp.skills)}"
-                    story.append(Paragraph(skills_text, body_style))
+                    story.append(Paragraph("Skills:", subheading_style))
+                    skill_paragraphs = [Paragraph(f"• {skill}", body_style) for skill in exp.skills]
+                    for skill_para in skill_paragraphs:
+                        story.append(skill_para)
                 
                 story.append(Spacer(1, 8))
         
@@ -396,12 +398,12 @@ class ResumeGenerator:
                 for category, skills in profile_data.skills_summary.by_category.items():
                     if skills:
                         story.append(Paragraph(f"{category.value}:", subheading_style))
-                        skill_names = [skill.name for skill in skills]
-                        story.append(Paragraph(', '.join(skill_names), body_style))
+                        for skill in skills:
+                            story.append(Paragraph(f"• {skill.name}", body_style))
             else:
-                # Simple list
-                skill_names = [skill.name for skill in profile_data.skills]
-                story.append(Paragraph(', '.join(skill_names), body_style))
+                # Simple list with bullets
+                for skill in profile_data.skills:
+                    story.append(Paragraph(f"• {skill.name}", body_style))
             story.append(Spacer(1, 12))
         
         # Education
