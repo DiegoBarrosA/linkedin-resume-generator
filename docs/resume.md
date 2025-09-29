@@ -16,11 +16,30 @@ With a strong foundation in computer science and over a decade of experience as 
 
 With a strong foundation in computer science and over a decade of experience as a Linux user, I focus on implementing scalable, automated solutions in cloud-native environments (Docker, OCI) and embedded systems. My expertise also includes Atlassian products, and I have a proven track record of executing technical projects and collaborating with global technology teams to deliver efficient, high-performance IT solutions.
 
-**Skills:** Docker, Linux, Atlassian, Python, DevOps, Cloud Computing
+**Skills:**
+- Docker
+- Linux
+- Atlassian
+- Python
+- DevOps
+- Cloud Computing
 
 ## Skills
 ### Other
-Docker, Linux, Python, Git, Atlassian, Jira, Confluence, AWS, Kubernetes, CI/CD, Node.js, React, DevOps, Open Source
+- Docker
+- Linux
+- Python
+- Git
+- Atlassian
+- Jira
+- Confluence
+- AWS
+- Kubernetes
+- CI/CD
+- Node.js
+- React
+- DevOps
+- Open Source
 
 ## Certifications
 ### Atlassian Certified Professional - Enterprise (ACP-EE)

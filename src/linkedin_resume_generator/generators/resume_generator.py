@@ -158,7 +158,9 @@ class ResumeGenerator:
                     lines.append(exp.description)
                 if exp.skills:
                     lines.append("")
-                    lines.append(f"**Skills:** {', '.join(exp.skills)}")
+                    lines.append("**Skills:**")
+                    for skill in exp.skills:
+                        lines.append(f"- {skill}")
                 lines.append("")
         
         # Skills
@@ -169,13 +171,13 @@ class ResumeGenerator:
                 for category, skills in profile_data.skills_summary.by_category.items():
                     if skills:
                         lines.append(f"### {category.value}")
-                        skill_names = [skill.name for skill in skills]
-                        lines.append(f"{', '.join(skill_names)}")
+                        for skill in skills:
+                            lines.append(f"- {skill.name}")
                         lines.append("")
             else:
-                # Simple list
-                skill_names = [skill.name for skill in profile_data.skills]
-                lines.append(f"{', '.join(skill_names)}")
+                # Simple list as markdown bullets
+                for skill in profile_data.skills:
+                    lines.append(f"- {skill.name}")
                 lines.append("")
         
         # Education
