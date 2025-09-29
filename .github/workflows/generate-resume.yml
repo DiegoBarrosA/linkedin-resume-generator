@@ -25,22 +25,31 @@ jobs:
       with:
         python-version: '3.9'
         
-    - name: Install system dependencies for WeasyPrint
+    - name: Install Pandoc and LaTeX for professional PDF generation
       run: |
         sudo apt-get update
         sudo apt-get install -y \
+          pandoc \
+          texlive-latex-base \
+          texlive-fonts-recommended \
+          texlive-latex-extra \
+          texlive-xetex \
+          fonts-liberation \
           libpango-1.0-0 \
           libpangoft2-1.0-0 \
           libgdk-pixbuf2.0-0 \
           libffi-dev \
           libcairo2 \
-          libgtk-3-0 \
           wkhtmltopdf
         
     - name: Install Python dependencies
       run: |
         pip install --upgrade pip
         pip install -r requirements.txt
+    
+    - name: Test Pandoc setup
+      run: |
+        python test_pandoc.py
         
     - name: Generate resume files
       run: |

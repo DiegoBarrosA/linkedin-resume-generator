@@ -263,27 +263,167 @@ class ResumeGenerator:
         timestamp: str,
         template: Optional[str] = None
     ) -> Path:
-        """Generate ATS-optimized PDF resume using markdown2 + weasyprint for GitHub Actions compatibility."""
+        """Generate ATS-optimized PDF resume using Pandoc + LaTeX for professional output."""
         filename = f"resume_{timestamp}.pdf"
         output_path = self.output_dir / filename
         
         # Generate the markdown content
         markdown_content = self._create_markdown_content(profile_data)
         
+        # Try Pandoc first (best quality, CI/CD optimized)
         try:
-            # Try markdown2 + ReportLab first (most reliable)
-            return await self._generate_pdf_markdown2(markdown_content, output_path)
-        except ImportError:
-            logger.info("markdown2 not available, trying weasyprint...")
+            return await self._generate_pdf_pandoc(markdown_content, output_path)
+        except (ImportError, FileNotFoundError, OSError) as e:
+            logger.info(f"Pandoc not available ({e}), trying markdown2...")
             try:
-                return await self._generate_pdf_weasyprint(markdown_content, output_path)
-            except (ImportError, OSError) as e:
-                logger.info(f"WeasyPrint not available ({e}), trying pdfkit...")
+                return await self._generate_pdf_markdown2(markdown_content, output_path)
+            except ImportError:
+                logger.info("markdown2 not available, trying weasyprint...")
                 try:
-                    return await self._generate_pdf_pdfkit(markdown_content, output_path)
-                except ImportError:
-                    logger.info("PDFKit not available, falling back to basic ReportLab...")
-                    return await self._generate_pdf_fallback(profile_data, timestamp)
+                    return await self._generate_pdf_weasyprint(markdown_content, output_path)
+                except (ImportError, OSError) as e:
+                    logger.info(f"WeasyPrint not available ({e}), trying pdfkit...")
+                    try:
+                        return await self._generate_pdf_pdfkit(markdown_content, output_path)
+                    except ImportError:
+                        logger.info("PDFKit not available, falling back to basic ReportLab...")
+                        return await self._generate_pdf_fallback(profile_data, timestamp)
+
+    async def _generate_pdf_pandoc(self, markdown_content: str, output_path: Path) -> Path:
+        """Generate ATS-optimized PDF using Pandoc + LaTeX (best quality, CI/CD friendly)."""
+        import subprocess
+        import shutil
+        import tempfile
+        import os
+        
+        # Check if pandoc is available
+        if not shutil.which('pandoc'):
+            raise FileNotFoundError("Pandoc not found in PATH")
+        
+        try:
+            # Create temporary markdown file with enhanced content
+            with tempfile.NamedTemporaryFile(mode='w', suffix='.md', delete=False, encoding='utf-8') as temp_md:
+                # Add YAML front matter for better Pandoc processing
+                enhanced_content = f"""---
+title: "Resume"
+author: "Resume"
+date: ""
+geometry: "margin=1in"
+fontsize: 11pt
+fontfamily: "helvet"
+colorlinks: false
+linkcolor: black
+urlcolor: black
+---
+
+{markdown_content}
+"""
+                temp_md.write(enhanced_content)
+                temp_md_path = temp_md.name
+            
+            # Use Pandoc to convert markdown to PDF with ATS-optimized LaTeX settings
+            pandoc_cmd = [
+                'pandoc',
+                temp_md_path,
+                '-o', str(output_path),
+                '--pdf-engine=xelatex',  # XeLaTeX for better font handling
+                '--variable', 'geometry:margin=1in',  # Standard 1-inch margins
+                '--variable', 'fontsize=11pt',  # Professional font size
+                '--variable', 'mainfont=Arial',  # ATS-friendly font
+                '--variable', 'sansfont=Arial',  # Consistent sans-serif
+                '--variable', 'monofont=Courier New',  # Monospace font
+                '--variable', 'colorlinks=false',  # No colored links for ATS
+                '--variable', 'linkcolor=black',  # Black links
+                '--variable', 'urlcolor=black',   # Black URLs
+                '--variable', 'citecolor=black',  # Black citations
+                '--variable', 'toccolor=black',   # Black TOC
+                '--variable', 'linestretch=1.2',  # Readable line spacing
+                '--variable', 'indent=false',     # No paragraph indentation
+                '--strip-comments',  # Remove comments
+                '--standalone',      # Create standalone document
+                '--from=markdown+yaml_metadata_block'  # Enable YAML front matter
+            ]
+            
+            # Execute pandoc
+            result = subprocess.run(
+                pandoc_cmd,
+                capture_output=True,
+                text=True,
+                check=False,
+                cwd=os.path.dirname(temp_md_path)
+            )
+            
+            # Clean up temporary file
+            os.unlink(temp_md_path)
+            
+            if result.returncode == 0:
+                logger.info(f"Generated ATS-optimized PDF resume using Pandoc+LaTeX: {output_path}")
+                return output_path
+            else:
+                # Try with pdflatex as fallback
+                logger.warning(f"XeLaTeX failed, trying pdflatex: {result.stderr}")
+                return await self._generate_pdf_pandoc_pdflatex(markdown_content, output_path)
+                
+        except Exception as e:
+            logger.error(f"Error generating PDF with Pandoc: {e}")
+            raise
+    
+    async def _generate_pdf_pandoc_pdflatex(self, markdown_content: str, output_path: Path) -> Path:
+        """Fallback Pandoc method using pdflatex instead of xelatex."""
+        import subprocess
+        import shutil
+        import tempfile
+        import os
+        
+        try:
+            # Create temporary markdown file
+            with tempfile.NamedTemporaryFile(mode='w', suffix='.md', delete=False, encoding='utf-8') as temp_md:
+                # Simpler YAML front matter for pdflatex compatibility
+                enhanced_content = f"""---
+geometry: "margin=1in"
+fontsize: 11pt
+colorlinks: false
+---
+
+{markdown_content}
+"""
+                temp_md.write(enhanced_content)
+                temp_md_path = temp_md.name
+            
+            # Use pdflatex with more basic settings
+            pandoc_cmd = [
+                'pandoc',
+                temp_md_path,
+                '-o', str(output_path),
+                '--pdf-engine=pdflatex',  # Standard pdflatex
+                '--variable', 'geometry:margin=1in',
+                '--variable', 'fontsize=11pt',
+                '--variable', 'colorlinks=false',
+                '--strip-comments',
+                '--standalone'
+            ]
+            
+            # Execute pandoc
+            result = subprocess.run(
+                pandoc_cmd,
+                capture_output=True,
+                text=True,
+                check=False
+            )
+            
+            # Clean up temporary file
+            os.unlink(temp_md_path)
+            
+            if result.returncode == 0:
+                logger.info(f"Generated ATS-optimized PDF resume using Pandoc+pdflatex: {output_path}")
+                return output_path
+            else:
+                logger.error(f"Pandoc pdflatex failed: {result.stderr}")
+                raise subprocess.CalledProcessError(result.returncode, pandoc_cmd, result.stderr)
+                
+        except Exception as e:
+            logger.error(f"Error generating PDF with Pandoc pdflatex: {e}")
+            raise
     
     async def _generate_pdf_markdown2(self, markdown_content: str, output_path: Path) -> Path:
         """Generate PDF using markdown2 + ReportLab (most reliable option)."""
