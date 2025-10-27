@@ -327,15 +327,17 @@ class AuthenticationHandler:
                 # Get all visible input fields
                 all_inputs = await page.query_selector_all("input")
                 self.logger.warning(f"Found {len(all_inputs)} input fields on page")
-                for i, inp in enumerate(all_inputs):
+                for i, inp in enumerate(all_inputs[:20]):  # Limit to first 20
                     try:
                         inp_type = await inp.get_attribute("type")
                         inp_name = await inp.get_attribute("name")
                         inp_id = await inp.get_attribute("id")
                         inp_placeholder = await inp.get_attribute("placeholder")
-                        self.logger.debug(f"Input {i}: type={inp_type}, name={inp_name}, id={inp_id}, placeholder={inp_placeholder}")
-                    except Exception:
-                        pass
+                        inp_aria_label = await inp.get_attribute("aria-label")
+                        inp_class = await inp.get_attribute("class")
+                        self.logger.warning(f"Input {i}: type={inp_type}, name={inp_name}, id={inp_id}, placeholder={inp_placeholder}, aria-label={inp_aria_label}, class={inp_class}")
+                    except Exception as e:
+                        self.logger.debug(f"Could not get input {i} attributes: {e}")
                 
                 raise TwoFactorAuthError("Could not find 2FA input field with any selector")
             
