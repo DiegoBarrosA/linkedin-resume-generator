@@ -404,102 +404,126 @@ class LinkedInScraper:
             # Process each experience item
             for item in experience_items:
                 try:
-                    # Get all text elements in the item to parse structure
-                    all_spans = await item.query_selector_all("span[aria-hidden='true']")
-                    
                     title = ""
                     company = ""
                     duration = ""
                     location = ""
                     
-                    # Parse the LinkedIn structure more carefully
-                    for i, span in enumerate(all_spans):
-                        text = await span.text_content() if span else ""
-                        if not text:
-                            continue
-                        text = text.strip()
-                        
-                        # First bold span is usually the title
-                        if i == 0 or len(title) == 0:
-                            # Check if this span is in a bold parent
-                            parent = await span.evaluate_handle("el => el.parentElement")
-                            parent_class = await parent.get_attribute("class") if parent else ""
-                            if "t-bold" in parent_class or "bold" in parent_class.lower():
-                                title = text
-                        elif not company and text:
-                            # Skip employment type keywords
-                            if text.lower() in ["full-time", "part-time", "contract", "internship", "freelance", "self-employed"]:
-                                continue
-                            # Skip if it looks like a date
-                            if any(month in text.lower() for month in ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"]):
-                                continue
-                            if text and len(text) > len(company):
-                                company = text
+                    # Extract title - try multiple selectors
+                    title_selectors = [
+                        ".mr1.hoverable-link-text.t-bold span[aria-hidden='true']",
+                        "h3.t-bold span[aria-hidden='true']",
+                        ".pvs-entity__summary-info h3 span",
+                        "span[data-field='title']",
+                        ".entity-lockup__title span[aria-hidden='true']"
+                    ]
                     
-                    # Try more specific selectors as fallback
-                    if not company:
-                        # Look for company name in specific structure
-                        company_containers = await item.query_selector_all("span.t-14.t-normal")
-                        for container in company_containers:
-                            text = await container.text_content() if container else ""
+                    for selector in title_selectors:
+                        title_elem = await item.query_selector(selector)
+                        if title_elem:
+                            text = await title_elem.text_content()
                             if text:
-                                text = text.strip()
-                                if text.lower() not in ["full-time", "part-time", "contract", "internship", "freelance", "self-employed", ""]:
-                                    company = text
-                                    break
-                    
-                    if not title:
-                        # Try to get title from bold elements
-                        title_elements = await item.query_selector_all(
-                            ".t-bold span[aria-hidden='true'], h3.t-bold span"
-                        )
-                        for elem in title_elements:
-                            text = await elem.text_content() if elem else ""
-                            if text and text.strip():
                                 title = text.strip()
                                 break
                     
+                    # Extract company - this is often in a link or span after the title
+                    company_selectors = [
+                        ".t-14.t-normal.t-black span[aria-hidden='true']",
+                        ".pv-entity__secondary-title",
+                        ".entity-lockup__subtitle a",
+                        "span[data-field='company']",
+                        ".pvs-entity__summary-info .t-14.t-normal span"
+                    ]
+                    
+                    all_texts = []
+                    for selector in company_selectors:
+                        elements = await item.query_selector_all(selector)
+                        for elem in elements:
+                            text = await elem.text_content()
+                            if text:
+                                all_texts.append(text.strip())
+                    
+                    # Filter out employment types and dates from company candidates
+                    self.logger.debug(f"Company candidate texts: {all_texts}")
+                    for text in all_texts:
+                        lower_text = text.lower()
+                        # Skip employment type keywords
+                        if lower_text in ["full-time", "part-time", "contract", "internship", "freelance", "self-employed"]:
+                            self.logger.debug(f"Skipping employment type: {text}")
+                            continue
+                        # Skip if it looks like a date
+                        if any(month in lower_text for month in ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"]):
+                            self.logger.debug(f"Skipping date: {text}")
+                            continue
+                        # Skip if it's too long (likely a description)
+                        if len(text) > 100:
+                            self.logger.debug(f"Skipping too long text: {text[:50]}...")
+                            continue
+                        # If we found something, use it
+                        if text and not company:
+                            company = text
+                            self.logger.debug(f"Selected company: {company}")
+                    
                     # Extract date range from caption wrapper
-                    if not duration:
-                        date_elements = await item.query_selector_all(
-                            ".pvs-entity__caption-wrapper span[aria-hidden='true']"
-                        )
-                        for elem in date_elements:
-                            text = await elem.text_content() if elem else ""
-                            # Look for date patterns
-                            if text and any(indicator in text.lower() for indicator in ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec", "present", "current", "-"]):
-                                if len(text) < 50:  # Filter out descriptions
-                                    duration = text.strip()
-                                    break
+                    date_selectors = [
+                        ".pvs-entity__caption-wrapper span[aria-hidden='true']",
+                        ".t-14.t-normal.t-black--light span[aria-hidden='true']",
+                        ".pv-entity__bullet-item-v2",
+                        ".date-range span"
+                    ]
+                    
+                    for selector in date_selectors:
+                        elements = await item.query_selector_all(selector)
+                        for elem in elements:
+                            text = await elem.text_content()
+                            if text:
+                                text = text.strip()
+                                # Look for date patterns
+                                if any(indicator in text.lower() for indicator in ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec", "present", "current", "-", "year"]):
+                                    if len(text) < 50:  # Filter out descriptions
+                                        duration = text
+                                        break
+                        if duration:
+                            break
                     
                     # Parse dates
                     start_date, end_date = await self._parse_date_range(duration)
                     
                     # Extract location
-                    location_elements = await item.query_selector_all(
-                        ".t-14.t-normal.t-black--light"
-                    )
-                    for elem in location_elements:
-                        text = await elem.text_content() if elem else ""
-                        if text and "," in text and any(char.isdigit() for char in text):
-                            # This looks like a location (city, country)
-                            location = text.strip()
+                    location_selectors = [
+                        ".t-14.t-normal.t-black--light",
+                        ".pv-entity__location",
+                        "span[data-field='location']"
+                    ]
+                    
+                    for selector in location_selectors:
+                        elements = await item.query_selector_all(selector)
+                        for elem in elements:
+                            text = await elem.text_content()
+                            if text:
+                                text = text.strip()
+                                # Location usually has comma or common location indicators
+                                if "," in text or any(location_word in text.lower() for location_word in ["remote", "hybrid", "on-site"]):
+                                    location = text
+                                    break
+                        if location:
                             break
                     
                     # Extract description
-                    desc_text = await item.text_content()
                     description = ""
-                    if desc_text and len(desc_text) > len(title) + len(company) + len(duration) + 50:
-                        # Try to extract the description portion
-                        lines = desc_text.split('\n')
-                        description_lines = []
-                        in_description = False
-                        for line in lines:
-                            if line.strip() and line not in [title, company, duration, location] and len(line) > 20:
-                                if "•" in line or "-" in line or line[0].islower():
-                                    description_lines.append(line.strip())
-                        
-                        description = "\n".join(description_lines)
+                    desc_selectors = [
+                        ".pvs-list__outer-container",
+                        ".pvs-entity__extra-details",
+                        ".show-more-less-text"
+                    ]
+                    
+                    for selector in desc_selectors:
+                        desc_elem = await item.query_selector(selector)
+                        if desc_elem:
+                            text = await desc_elem.text_content()
+                            if text and len(text) > 50 and text not in [title, company, duration, location]:
+                                description = text.strip()
+                                break
                     
                     # Only add if we have valid data
                     if title and company:
@@ -512,7 +536,7 @@ class LinkedInScraper:
                             location=location.strip() if location else None,
                             start_date=start_date,
                             end_date=end_date,
-                            duration=duration.strip(),
+                            duration=duration.strip() if duration else None,
                             description=description.strip() if description else None
                         ))
                 
