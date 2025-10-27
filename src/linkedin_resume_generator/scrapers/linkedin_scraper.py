@@ -183,8 +183,36 @@ class LinkedInScraper:
             current_url = self.page.url
             self.logger.debug(f"Current URL before navigation: {current_url}")
             
+            # If we're on an authwall page, extract the sessionRedirect and use it
+            if "authwall" in current_url:
+                import urllib.parse
+                self.logger.info("On authwall page, extracting redirect URL...")
+                
+                try:
+                    # Extract sessionRedirect from URL
+                    parsed = urllib.parse.urlparse(current_url)
+                    params = urllib.parse.parse_qs(parsed.query)
+                    
+                    if "sessionRedirect" in params:
+                        redirect_url = params["sessionRedirect"][0]
+                        self.logger.info(f"Found session redirect: {redirect_url}")
+                        url = redirect_url
+                    elif profile_url:
+                        url = profile_url
+                    else:
+                        url = "https://www.linkedin.com/in/me/"
+                    
+                    self.logger.info(f"Following redirect to: {url}")
+                    await self.page.goto(url, wait_until="domcontentloaded", timeout=30000)
+                    await asyncio.sleep(3)
+                except Exception as e:
+                    self.logger.warning(f"Extract redirect failed: {e}, navigating to /in/me/")
+                    url = "https://www.linkedin.com/in/me/"
+                    await self.page.goto(url, wait_until="domcontentloaded", timeout=30000)
+                    await asyncio.sleep(2)
+            
             # If we're on a login redirect or challenge page, navigate directly to profile
-            if "uas/login" in current_url or "checkpoint" in current_url or "challenge" in current_url:
+            elif "uas/login" in current_url or "checkpoint" in current_url or "challenge" in current_url:
                 self.logger.info("On login/challenge page, navigating directly to profile...")
                 
                 if profile_url:
