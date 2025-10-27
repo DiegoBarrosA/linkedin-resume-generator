@@ -214,10 +214,37 @@ class LinkedInScraper:
                     self.logger.debug(f"URL after navigation: {new_url}")
                     
                     if "authwall" in new_url:
-                        self.logger.warning("Still on authwall after navigation, waiting more...")
+                        self.logger.warning("Still on authwall after navigation, trying to click through...")
+                        
+                        # Try to find and click "Continue" or similar button
+                        continue_buttons = [
+                            "button:has-text('Continue')",
+                            "button:has-text('Yes, that's me')",
+                            "a:has-text('Continue')",
+                            "button[type='submit']",
+                            ".challenge-container button",
+                            "[data-litms-control-urn]"
+                        ]
+                        
+                        for button_selector in continue_buttons:
+                            try:
+                                button = await self.page.query_selector(button_selector)
+                                if button:
+                                    is_visible = await button.is_visible()
+                                    if is_visible:
+                                        self.logger.info(f"Clicking button: {button_selector}")
+                                        await button.click()
+                                        await asyncio.sleep(3)
+                                        break
+                            except Exception as e:
+                                self.logger.debug(f"Button {button_selector} not found: {e}")
+                        
                         await asyncio.sleep(5)
-                        # Try clicking through if needed
-                        await self.page.wait_for_load_state("networkidle", timeout=10000)
+                        await self.page.wait_for_load_state("networkidle", timeout=15000)
+                        
+                        # Check URL again
+                        final_check = self.page.url
+                        self.logger.debug(f"URL after waiting: {final_check}")
                         
                 except Exception as e:
                     self.logger.warning(f"Extract redirect failed: {e}, navigating to /in/me/")
