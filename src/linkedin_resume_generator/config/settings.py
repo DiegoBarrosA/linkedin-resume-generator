@@ -22,7 +22,7 @@ class ScrapingConfig(BaseModel):
     timeout: int = Field(default=30, description="Page timeout in seconds")
     retry_attempts: int = Field(default=3, description="Number of retry attempts")
     retry_delay: float = Field(default=1.0, description="Delay between retries in seconds")
-    headless: bool = Field(default=True, description="Run browser in headless mode")
+    headless: bool = Field(default=os.getenv("LINKEDIN_HEADLESS", "true").lower() == "true", description="Run browser in headless mode")
     slow_mo: int = Field(default=100, description="Slow motion delay in milliseconds")
     
     @field_validator("timeout")
