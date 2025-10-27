@@ -175,23 +175,47 @@ class LinkedInScraper:
     async def _navigate_to_profile(self, profile_url: Optional[str] = None) -> None:
         """Navigate to LinkedIn profile."""
         try:
+            # Wait a moment after authentication to let redirects complete
+            import asyncio
+            await asyncio.sleep(3)
+            
+            # Check current URL - if still on challenge page, wait for redirect
+            current_url = self.page.url
+            self.logger.debug(f"Current URL before navigation: {current_url}")
+            
+            if "checkpoint" in current_url or "challenge" in current_url:
+                self.logger.info("Still on challenge page, waiting for redirect...")
+                await self.page.wait_for_load_state("networkidle", timeout=10000)
+                await asyncio.sleep(2)
+                current_url = self.page.url
+                self.logger.debug(f"URL after waiting: {current_url}")
+            
             if profile_url:
                 url = profile_url
             else:
                 # Navigate to own profile
                 url = "https://www.linkedin.com/in/me/"
             
-            await self.page.goto(url, wait_until="networkidle")
+            self.logger.debug(f"Navigating to profile: {url}")
+            await self.page.goto(url, wait_until="domcontentloaded", timeout=30000)
+            await asyncio.sleep(2)
             
-            # Wait for profile content to load
-            await self.page.wait_for_selector(
-                ".pv-text-details__left-panel, .profile-header", 
-                timeout=self.settings.scraping.timeout * 1000
-            )
+            # Wait for profile content to load (with multiple fallback selectors)
+            try:
+                await self.page.wait_for_selector(
+                    ".pv-text-details__left-panel, .profile-header, main", 
+                    timeout=15000
+                )
+            except Exception as e:
+                self.logger.warning(f"Profile selector timeout: {e}")
+                # Continue anyway - page might have loaded with different structure
             
-            self.logger.debug(f"Navigated to profile: {url}")
+            self.logger.info(f"Successfully navigated to profile: {self.page.url}")
             
         except Exception as e:
+            # Log current URL for debugging
+            self.logger.error(f"Failed to navigate to profile: {e}")
+            self.logger.error(f"Current URL: {self.page.url}")
             raise ScrapingError(f"Failed to navigate to profile: {e}")
     
     async def _navigate_to_details_section(self, section: str) -> None:
