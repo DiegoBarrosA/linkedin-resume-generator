@@ -68,6 +68,17 @@ class LinkedInScraper:
             # Navigate to profile
             await self._navigate_to_profile(profile_url)
             
+            # Wait a bit more to ensure we're not on authwall
+            await asyncio.sleep(2)
+            final_url = self.page.url
+            if "authwall" in final_url:
+                self.logger.warning(f"Still on authwall: {final_url}, forcing navigation to profile...")
+                await self.page.goto("https://www.linkedin.com/in/me/", wait_until="domcontentloaded", timeout=30000)
+                await asyncio.sleep(5)
+            
+            # Log current URL before extracting
+            self.logger.info(f"Starting data extraction from: {self.page.url}")
+            
             # Extract basic profile info
             basic_info = await self._extract_basic_info()
             
