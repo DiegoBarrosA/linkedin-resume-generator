@@ -342,13 +342,13 @@ class ResumeGenerator:
             # Create temporary markdown file with enhanced content
             with tempfile.NamedTemporaryFile(mode='w', suffix='.md', delete=False, encoding='utf-8') as temp_md:
                 # Add YAML front matter for better Pandoc processing
+                # Using pdflatex-compatible settings without custom fonts
                 enhanced_content = f"""---
 title: "Resume"
 author: "Resume"
 date: ""
 geometry: "margin=1in"
 fontsize: 11pt
-fontfamily: "helvet"
 colorlinks: false
 linkcolor: black
 urlcolor: black
@@ -360,16 +360,14 @@ urlcolor: black
                 temp_md_path = temp_md.name
             
             # Use Pandoc to convert markdown to PDF with ATS-optimized LaTeX settings
+            # Using pdflatex with standard LaTeX fonts for better compatibility
             pandoc_cmd = [
                 'pandoc',
                 temp_md_path,
                 '-o', str(output_path),
-                '--pdf-engine=xelatex',  # XeLaTeX for better font handling
+                '--pdf-engine=pdflatex',  # pdflatex for better font compatibility
                 '--variable', 'geometry:margin=1in',  # Standard 1-inch margins
                 '--variable', 'fontsize=11pt',  # Professional font size
-                '--variable', 'mainfont=Arial',  # ATS-friendly font
-                '--variable', 'sansfont=Arial',  # Consistent sans-serif
-                '--variable', 'monofont=Courier New',  # Monospace font
                 '--variable', 'colorlinks=false',  # No colored links for ATS
                 '--variable', 'linkcolor=black',  # Black links
                 '--variable', 'urlcolor=black',   # Black URLs
