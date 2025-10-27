@@ -260,19 +260,32 @@ class AuthenticationHandler:
             # Wait for the page to fully load
             await asyncio.sleep(2)
             
+            # Try clicking "try-another-way" link if present (switch to TOTP verification)
+            try_another_way = await page.query_selector("#try-another-way")
+            if try_another_way:
+                self.logger.info("Clicking 'try-another-way' to switch to TOTP verification")
+                await try_another_way.click()
+                await asyncio.sleep(2)
+            
             # Check if this is a device recognition challenge (checkbox)
             device_checkbox = await page.query_selector("input[name='recognizedDevice'][type='checkbox']")
             if device_checkbox:
                 is_checked = await device_checkbox.is_checked()
                 if not is_checked:
                     self.logger.info("Clicking 'recognizedDevice' checkbox to trust this device")
-                    await device_checkbox.click()
+                    # Try clicking the label first (as per Selenium recording)
+                    device_label = await page.query_selector(".recognized__device .form__label")
+                    if device_label:
+                        await device_label.click()
+                    else:
+                        await device_checkbox.click()
                     await asyncio.sleep(1)
                 else:
                     self.logger.info("Device already recognized")
                 
                 # Find and click continue/submit button
                 submit_buttons = [
+                    "#two-step-submit-button",
                     "button[type='submit']",
                     "input[type='submit']",
                     "button:has-text('Continue')",
@@ -302,10 +315,18 @@ class AuthenticationHandler:
             code = totp.now()
             self.logger.info(f"Generated TOTP code: {code}")
             
+            # Try clicking the recognized device checkbox label if present (from Selenium recording)
+            device_label = await page.query_selector(".recognized__device .form__label")
+            if device_label:
+                self.logger.info("Clicking recognized device checkbox label")
+                await device_label.click()
+                await asyncio.sleep(0.5)
+            
             # Try multiple selectors for the 2FA input field
             pin_selectors = [
+                "#input__phone_verification_pin",
                 "input[name='pin']",
-                "input[id='input__phone_verification_pin']",
+                "input[id='pin']",
                 "input[placeholder*='verification']",
                 "input[placeholder*='verification code']",
                 "input[placeholder*='code']",
@@ -314,9 +335,7 @@ class AuthenticationHandler:
                 "input[aria-label*='verification']",
                 "input[aria-label*='code']",
                 "#verificationCode",
-                "#verification_code",
-                "#pin",
-                "#code"
+                "#verification_code"
             ]
             
             code_entered = False
@@ -374,6 +393,7 @@ class AuthenticationHandler:
             
             # Submit the form
             submit_selectors = [
+                "#two-step-submit-button",
                 "button[type='submit']",
                 "[data-test-id='challenge-form-submit-btn']",
                 ".challenge-form button[type='submit']",
