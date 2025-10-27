@@ -199,7 +199,7 @@ class AuthenticationHandler:
             raise AuthenticationError(f"Failed to enter credentials: {e}")
     
     async def _is_2fa_required(self, page: Page) -> bool:
-        """Check if 2FA verification is required."""
+        """Check if 2FA verification or challenge is required."""
         try:
             await asyncio.sleep(3)  # Wait for potential redirect or challenge
             
@@ -211,26 +211,20 @@ class AuthenticationHandler:
                 self.logger.info("Challenge detected in URL")
                 return True
             
-            # Look for 2FA challenge elements
-            challenge_selectors = [
-                "input[name='pin']",
-                "input[id='input__phone_verification_pin']",
-                "[data-test-id='challenge-form']",
-                ".challenge-form",
-                "input[placeholder*='verification']",
-                "input[placeholder*='PIN']",
-                "input[placeholder*='code']"
-            ]
+            # Check for device recognition checkbox (trust this device)
+            device_checkbox = await page.query_selector("input[name='recognizedDevice'][type='checkbox']")
+            if device_checkbox:
+                self.logger.info("Device recognition challenge detected")
+                return True
             
-            for selector in challenge_selectors:
-                element = await page.query_selector(selector)
-                if element:
-                    self.logger.info(f"2FA challenge detected with selector: {selector}")
-                    return True
+            # Look for 2FA code input elements
+            pin_input = await page.query_selector("input[name='pin'], input[id='input__phone_verification_pin']")
+            if pin_input:
+                self.logger.info("2FA code input detected")
+                return True
             
             # Check for generic challenge indicators
             challenge_indicators = [
-                ".challenge-prompt",
                 "[data-validation-id='challenge-form']",
                 "span:has-text('Enter code')",
                 "div:has-text('verification code')"
@@ -242,7 +236,7 @@ class AuthenticationHandler:
                     self.logger.info("Challenge prompt detected")
                     return True
             
-            self.logger.debug("No 2FA challenge detected")
+            self.logger.debug("No challenge detected")
             return False
             
         except Exception as e:
@@ -250,7 +244,7 @@ class AuthenticationHandler:
             return False
     
     async def _handle_2fa(self, page: Page) -> None:
-        """Handle 2FA verification."""
+        """Handle 2FA verification or device recognition."""
         try:
             # Take screenshot for debugging
             if self.settings.debug:
@@ -260,19 +254,53 @@ class AuthenticationHandler:
             # Log the current URL and page title
             current_url = page.url
             page_title = await page.title()
-            self.logger.info(f"Handling 2FA on: {current_url}")
+            self.logger.info(f"Handling challenge on: {current_url}")
             self.logger.info(f"Page title: {page_title}")
-            
-            # Generate TOTP code
-            if self.credentials.totp_secret:
-                totp = pyotp.TOTP(self.credentials.totp_secret)
-                code = totp.now()
-                self.logger.info(f"Generated TOTP code: {code}")
-            else:
-                raise TwoFactorAuthError("No TOTP secret provided")
             
             # Wait for the page to fully load
             await asyncio.sleep(2)
+            
+            # Check if this is a device recognition challenge (checkbox)
+            device_checkbox = await page.query_selector("input[name='recognizedDevice'][type='checkbox']")
+            if device_checkbox:
+                is_checked = await device_checkbox.is_checked()
+                if not is_checked:
+                    self.logger.info("Clicking 'recognizedDevice' checkbox to trust this device")
+                    await device_checkbox.click()
+                    await asyncio.sleep(1)
+                else:
+                    self.logger.info("Device already recognized")
+                
+                # Find and click continue/submit button
+                submit_buttons = [
+                    "button[type='submit']",
+                    "input[type='submit']",
+                    "button:has-text('Continue')",
+                    "button:has-text('Verify')",
+                    "[data-test-id='challenge-form-submit-btn']"
+                ]
+                
+                for selector in submit_buttons:
+                    try:
+                        element = await page.query_selector(selector)
+                        if element and await element.is_visible():
+                            await element.click()
+                            self.logger.info(f"✅ Clicked submit button: {selector}")
+                            await asyncio.sleep(2)
+                            return
+                    except Exception as e:
+                        self.logger.debug(f"Could not click {selector}: {e}")
+                        continue
+                
+                raise TwoFactorAuthError("Could not find submit button after checking device")
+            
+            # This is a 2FA code challenge - generate and enter TOTP code
+            if not self.credentials.totp_secret:
+                raise TwoFactorAuthError("No TOTP secret provided")
+            
+            totp = pyotp.TOTP(self.credentials.totp_secret)
+            code = totp.now()
+            self.logger.info(f"Generated TOTP code: {code}")
             
             # Try multiple selectors for the 2FA input field
             pin_selectors = [
