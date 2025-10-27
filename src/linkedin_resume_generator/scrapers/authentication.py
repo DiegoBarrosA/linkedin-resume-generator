@@ -252,49 +252,137 @@ class AuthenticationHandler:
     async def _handle_2fa(self, page: Page) -> None:
         """Handle 2FA verification."""
         try:
+            # Take screenshot for debugging
+            if self.settings.debug:
+                await page.screenshot(path="challenge_page.png")
+                self.logger.debug("Screenshot saved to challenge_page.png")
+            
+            # Log the current URL and page title
+            current_url = page.url
+            page_title = await page.title()
+            self.logger.info(f"Handling 2FA on: {current_url}")
+            self.logger.info(f"Page title: {page_title}")
+            
             # Generate TOTP code
-            totp = pyotp.TOTP(self.credentials.totp_secret)
-            code = totp.now()
+            if self.credentials.totp_secret:
+                totp = pyotp.TOTP(self.credentials.totp_secret)
+                code = totp.now()
+                self.logger.info(f"Generated TOTP code: {code}")
+            else:
+                raise TwoFactorAuthError("No TOTP secret provided")
             
-            self.logger.debug("Generated 2FA code")
+            # Wait for the page to fully load
+            await asyncio.sleep(2)
             
-            # Enter the code
+            # Try multiple selectors for the 2FA input field
             pin_selectors = [
                 "input[name='pin']",
                 "input[id='input__phone_verification_pin']",
-                "input[placeholder*='verification']"
+                "input[placeholder*='verification']",
+                "input[placeholder*='verification code']",
+                "input[placeholder*='code']",
+                "input[placeholder*='PIN']",
+                "input[type='text']",
+                "input[aria-label*='verification']",
+                "input[aria-label*='code']",
+                "#verificationCode",
+                "#verification_code",
+                "#pin",
+                "#code"
             ]
             
             code_entered = False
             for selector in pin_selectors:
-                element = await page.query_selector(selector)
-                if element:
-                    await page.fill(selector, code)
-                    code_entered = True
-                    break
+                try:
+                    self.logger.debug(f"Trying TOTP input selector: {selector}")
+                    element = await page.query_selector(selector)
+                    if element:
+                        # Check if element is visible
+                        is_visible = await element.is_visible()
+                        if not is_visible:
+                            self.logger.debug(f"Element {selector} found but not visible")
+                            continue
+                        
+                        # Click to focus
+                        await element.click()
+                        await asyncio.sleep(0.3)
+                        
+                        # Type the code
+                        await element.type(code, delay=100)
+                        self.logger.info(f"✅ TOTP code entered using selector: {selector}")
+                        code_entered = True
+                        break
+                except Exception as e:
+                    self.logger.debug(f"Selector {selector} failed: {e}")
+                    continue
             
             if not code_entered:
-                raise TwoFactorAuthError("Could not find 2FA input field")
+                # Log page content for debugging
+                try:
+                    page_content = await page.content()
+                    self.logger.debug(f"Page HTML sample: {page_content[:1000]}")
+                except Exception:
+                    pass
+                
+                # Get all visible input fields
+                all_inputs = await page.query_selector_all("input")
+                self.logger.warning(f"Found {len(all_inputs)} input fields on page")
+                for i, inp in enumerate(all_inputs):
+                    try:
+                        inp_type = await inp.get_attribute("type")
+                        inp_name = await inp.get_attribute("name")
+                        inp_id = await inp.get_attribute("id")
+                        inp_placeholder = await inp.get_attribute("placeholder")
+                        self.logger.debug(f"Input {i}: type={inp_type}, name={inp_name}, id={inp_id}, placeholder={inp_placeholder}")
+                    except Exception:
+                        pass
+                
+                raise TwoFactorAuthError("Could not find 2FA input field with any selector")
+            
+            # Wait a bit before submitting
+            await asyncio.sleep(1)
             
             # Submit the form
             submit_selectors = [
-                "[type='submit']",
-                "button[data-test-id='challenge-form-submit-btn']",
-                ".challenge-form button"
+                "button[type='submit']",
+                "[data-test-id='challenge-form-submit-btn']",
+                ".challenge-form button[type='submit']",
+                "button.sign-in-form__submit-button",
+                "input[type='submit']",
+                "button:has-text('Verify')",
+                "button:has-text('Continue')",
+                "button:has-text('Submit')"
             ]
             
+            submit_clicked = False
             for selector in submit_selectors:
-                element = await page.query_selector(selector)
-                if element:
-                    await page.click(selector)
-                    break
+                try:
+                    self.logger.debug(f"Trying submit button selector: {selector}")
+                    element = await page.query_selector(selector)
+                    if element:
+                        is_visible = await element.is_visible()
+                        if not is_visible:
+                            continue
+                        
+                        await element.click()
+                        self.logger.info(f"✅ Submit button clicked using selector: {selector}")
+                        submit_clicked = True
+                        break
+                except Exception as e:
+                    self.logger.debug(f"Submit selector {selector} failed: {e}")
+                    continue
+            
+            if not submit_clicked:
+                self.logger.warning("Could not find submit button, but code was entered")
             
             # Wait for verification
+            self.logger.debug("Waiting for 2FA verification to complete...")
             await page.wait_for_load_state("networkidle", timeout=self.settings.scraping.timeout * 1000)
             
-            self.logger.debug("2FA code submitted")
+            self.logger.info("✅ 2FA code submitted and verification completed")
             
         except Exception as e:
+            self.logger.error(f"2FA verification failed: {e}")
             raise TwoFactorAuthError(f"2FA verification failed: {e}")
     
     async def _verify_login_success(self, page: Page) -> bool:
