@@ -112,28 +112,8 @@ class Settings(BaseSettings):
         env_file_encoding="utf-8",
         env_nested_delimiter="__",
         case_sensitive=False,
+        extra="ignore",  # Ignore extra fields (like LINKEDIN_EMAIL) during construction
     )
-
-    @classmethod
-    def from_env(cls) -> "Settings":
-        """Create settings from environment variables and .env file."""
-        # Create base settings using BaseSettings functionality
-        settings = cls()
-        
-        # Handle backwards compatibility for legacy environment variable names
-        # LinkedIn credentials with LINKEDIN_* prefix (legacy format)
-        if os.getenv("LINKEDIN_EMAIL"):
-            settings.linkedin.email = os.getenv("LINKEDIN_EMAIL", "")
-        if os.getenv("LINKEDIN_PASSWORD"):
-            settings.linkedin.password = os.getenv("LINKEDIN_PASSWORD", "")  
-        if os.getenv("LINKEDIN_TOTP_SECRET"):
-            settings.linkedin.totp_secret = os.getenv("LINKEDIN_TOTP_SECRET")
-            
-        # CI Mode with LINKEDIN_CI_MODE prefix (legacy format)
-        if os.getenv("LINKEDIN_CI_MODE"):
-            settings.ci_mode = os.getenv("LINKEDIN_CI_MODE", "false").lower() == "true"
-        
-        return settings
     
     @field_validator("environment")
     @classmethod
@@ -165,5 +145,20 @@ class Settings(BaseSettings):
 
 
 def get_settings() -> Settings:
-    """Get application settings."""
-    return Settings.from_env()
+    """Get application settings with proper credential handling."""
+    # Create settings from BaseSettings (reads .env file automatically)
+    settings = Settings()
+    
+    # Handle legacy environment variable names and populate nested linkedin model
+    if os.getenv("LINKEDIN_EMAIL"):
+        settings.linkedin.email = os.getenv("LINKEDIN_EMAIL", "")
+    if os.getenv("LINKEDIN_PASSWORD"):
+        settings.linkedin.password = os.getenv("LINKEDIN_PASSWORD", "")
+    if os.getenv("LINKEDIN_TOTP_SECRET"):
+        settings.linkedin.totp_secret = os.getenv("LINKEDIN_TOTP_SECRET")
+    
+    # Handle CI mode
+    if os.getenv("LINKEDIN_CI_MODE"):
+        settings.ci_mode = os.getenv("LINKEDIN_CI_MODE", "false").lower() == "true"
+    
+    return settings
