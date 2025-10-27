@@ -245,12 +245,29 @@ class LinkedInScraper:
             
             # Verify we're on a profile page
             final_url = self.page.url
-            if "/in/" not in final_url and "/feed" not in final_url:
+            self.logger.debug(f"Checking final URL: {final_url}")
+            
+            # If still on authwall after redirect, wait for it to resolve
+            if "authwall" in final_url:
+                self.logger.info("Still on authwall, waiting for page to resolve...")
+                # Wait for redirect
+                try:
+                    await self.page.wait_for_load_state("networkidle", timeout=10000)
+                except Exception as e:
+                    self.logger.debug(f"Wait timeout: {e}")
+                
+                await asyncio.sleep(3)
+                final_url = self.page.url
+                self.logger.debug(f"URL after waiting: {final_url}")
+            
+            # Check if we're actually on a profile page now
+            if "/in/" not in final_url and "/feed" not in final_url and "authwall" not in final_url:
                 self.logger.error(f"Still not on profile page. Current URL: {final_url}")
                 # Try one more time to navigate
                 url = profile_url if profile_url else "https://www.linkedin.com/in/me/"
                 await self.page.goto(url, wait_until="domcontentloaded", timeout=30000)
                 await asyncio.sleep(2)
+                final_url = self.page.url
             
             # Try to wait for profile content with fallbacks
             try:

@@ -160,18 +160,38 @@ class SkillExtractor:
         if not parsed_url.netloc.endswith('linkedin.com'):
             raise ScrapingError(f"Not a LinkedIn URL: {current_url}")
         
+        # Allow authwall pages (they redirect to profile)
+        if "authwall" in current_url:
+            self.logger.warning(f"On authwall page: {current_url}")
+            # Check if there's a sessionRedirect parameter
+            from urllib.parse import parse_qs
+            params = parse_qs(parsed_url.query)
+            if "sessionRedirect" in params:
+                redirect_url = params["sessionRedirect"][0]
+                self.logger.info(f"Will follow session redirect: {redirect_url}")
+            return
+        
         # Check if we're already on a valid profile page
         path_parts = parsed_url.path.strip('/').split('/')
         if len(path_parts) >= 2 and path_parts[0] == 'in' and path_parts[1]:
             # Already on a valid "/in/<slug>" path with non-empty slug
             return
         
+        # Allow feed and other LinkedIn pages
+        if 'feed' in current_url or 'mynetwork' in current_url or 'jobs' in current_url:
+            self.logger.debug(f"On LinkedIn page but not profile: {current_url}")
+            return
+        
         # If we're not on a valid profile path, raise an error
-        # Don't attempt to construct a bare "/in/" path
-        raise ScrapingError(
-            f"Current URL does not point to a valid LinkedIn profile (/in/<slug> pattern). "
-            f"Please provide a concrete profile URL. Current URL: {current_url}"
+        self.logger.warning(
+            f"Not on a profile page yet. Current URL: {current_url}. "
+            f"Attempting to continue anyway..."
         )
+        # Don't raise error - let it try to navigate to profile
+        # raise ScrapingError(
+        #     f"Current URL does not point to a valid LinkedIn profile (/in/<slug> pattern). "
+        #     f"Please provide a concrete profile URL. Current URL: {current_url}"
+        # )
     
     async def _extract_from_skills_details_page(self, page: Page) -> List[Skill]:
         """Extract skills from the skills details page."""
