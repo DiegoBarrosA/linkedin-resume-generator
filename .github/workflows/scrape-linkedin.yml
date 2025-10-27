@@ -73,10 +73,10 @@ jobs:
         # Set CI environment flag to bypass interactive confirmation
         export LINKEDIN_CI_MODE=true
         
-        # Try new CLI first, fallback to legacy if needed
+        # Try new modular architecture first, fallback to legacy if needed
         if python -c "import src.linkedin_resume_generator" 2>/dev/null; then
           echo "🚀 Using new modular architecture"
-          python main.py scrape --format both
+          python main.py scrape
         else
           echo "📦 Using legacy implementation"
           python run_legacy.py
