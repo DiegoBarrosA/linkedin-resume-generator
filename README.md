@@ -30,7 +30,15 @@ cp .env.example .env  # Configure your credentials
 
 **📖 For detailed setup instructions, see the [Installation Guide](docs/setup.md)**
 
-## 🚀 Quick Start
+## � Documentation
+
+- [AI Context & Project Overview](docs/ai_context/index.md)
+- [Quick Start](docs/quickstart.md)
+- [CLI Usage](docs/cli-usage.md)
+- [Compliance](docs/COMPLIANCE.md)
+- [Setup Guide](docs/setup.md)
+
+## �🚀 Quick Start
 
 Generate your resume in 3 simple steps:
 
@@ -46,6 +54,18 @@ python main.py scrape --email your.email@example.com
 ```
 
 **📘 For complete usage guide, see the [Quick Start Documentation](docs/quickstart.md)**
+
+---
+
+### GitHub Pages Compatibility
+
+This documentation is compatible with GitHub Pages using Jekyll. Shared styles and scripts are included in all documentation pages:
+
+```html
+<link rel="stylesheet" href="https://diegobarrosa.github.io/diegobarrosaraya-assets/shared-theme.css">
+<link rel="stylesheet" href="https://diegobarrosa.github.io/diegobarrosaraya-assets/shared-footer.css">
+<script src="https://diegobarrosa.github.io/diegobarrosaraya-assets/shared-theme.js"></script>
+```
 
 ## 🔧 Configuration
 
