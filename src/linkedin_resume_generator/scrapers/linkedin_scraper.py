@@ -404,49 +404,73 @@ class LinkedInScraper:
             # Process each experience item
             for item in experience_items:
                 try:
-                    # Extract company name - try multiple selectors
-                    company_elements = await item.query_selector_all(
-                        ".t-14.t-normal.t-black--light span[aria-hidden='true'], "
-                        ".t-14.t-normal span[aria-hidden='true']"
-                    )
-                    
-                    company = ""
-                    location = ""
-                    
-                    for elem in company_elements:
-                        text = await elem.text_content() if elem else ""
-                        if text:
-                            text = text.strip()
-                            # Skip "Full-time", "Part-time", etc.
-                            if text.lower() not in ["full-time", "part-time", "contract", "internship"]:
-                                if not company or len(text) > len(company):
-                                    company = text
-                    
-                    # Extract job title - use first span with t-bold
-                    title_elements = await item.query_selector_all(
-                        ".t-bold span[aria-hidden='true'], h3.t-bold span"
-                    )
+                    # Get all text elements in the item to parse structure
+                    all_spans = await item.query_selector_all("span[aria-hidden='true']")
                     
                     title = ""
-                    for elem in title_elements:
-                        text = await elem.text_content() if elem else ""
-                        if text and text.strip():
-                            title = text.strip()
-                            break
-                    
-                    # Extract date range
-                    date_elements = await item.query_selector_all(
-                        ".pvs-entity__caption-wrapper, .t-14.t-normal.t-black--light"
-                    )
-                    
+                    company = ""
                     duration = ""
-                    for elem in date_elements:
-                        text = await elem.text_content() if elem else ""
-                        # Look for date patterns
-                        if text and any(indicator in text.lower() for indicator in ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec", "present", "current", "/"]):
-                            if len(text) < 50:  # Filter out descriptions
-                                duration = text.strip()
+                    location = ""
+                    
+                    # Parse the LinkedIn structure more carefully
+                    for i, span in enumerate(all_spans):
+                        text = await span.text_content() if span else ""
+                        if not text:
+                            continue
+                        text = text.strip()
+                        
+                        # First bold span is usually the title
+                        if i == 0 or len(title) == 0:
+                            # Check if this span is in a bold parent
+                            parent = await span.evaluate_handle("el => el.parentElement")
+                            parent_class = await parent.get_attribute("class") if parent else ""
+                            if "t-bold" in parent_class or "bold" in parent_class.lower():
+                                title = text
+                        elif not company and text:
+                            # Skip employment type keywords
+                            if text.lower() in ["full-time", "part-time", "contract", "internship", "freelance", "self-employed"]:
+                                continue
+                            # Skip if it looks like a date
+                            if any(month in text.lower() for month in ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"]):
+                                continue
+                            if text and len(text) > len(company):
+                                company = text
+                    
+                    # Try more specific selectors as fallback
+                    if not company:
+                        # Look for company name in specific structure
+                        company_containers = await item.query_selector_all("span.t-14.t-normal")
+                        for container in company_containers:
+                            text = await container.text_content() if container else ""
+                            if text:
+                                text = text.strip()
+                                if text.lower() not in ["full-time", "part-time", "contract", "internship", "freelance", "self-employed", ""]:
+                                    company = text
+                                    break
+                    
+                    if not title:
+                        # Try to get title from bold elements
+                        title_elements = await item.query_selector_all(
+                            ".t-bold span[aria-hidden='true'], h3.t-bold span"
+                        )
+                        for elem in title_elements:
+                            text = await elem.text_content() if elem else ""
+                            if text and text.strip():
+                                title = text.strip()
                                 break
+                    
+                    # Extract date range from caption wrapper
+                    if not duration:
+                        date_elements = await item.query_selector_all(
+                            ".pvs-entity__caption-wrapper span[aria-hidden='true']"
+                        )
+                        for elem in date_elements:
+                            text = await elem.text_content() if elem else ""
+                            # Look for date patterns
+                            if text and any(indicator in text.lower() for indicator in ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec", "present", "current", "-"]):
+                                if len(text) < 50:  # Filter out descriptions
+                                    duration = text.strip()
+                                    break
                     
                     # Parse dates
                     start_date, end_date = await self._parse_date_range(duration)
