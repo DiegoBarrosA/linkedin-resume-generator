@@ -91,18 +91,69 @@ class AuthenticationHandler:
     async def _enter_credentials(self, page: Page) -> None:
         """Enter email and password."""
         try:
-            # Enter email
-            email_selector = "#username"
-            await page.wait_for_selector(email_selector, timeout=self.settings.scraping.timeout * 1000)
-            await page.fill(email_selector, self.credentials.email)
+            # Try multiple selectors for email field (LinkedIn may use different ones)
+            email_selectors = ["#username", "input[name='session_key']", "[type='text']"]
             
-            # Enter password
-            password_selector = "#password"
-            await page.fill(password_selector, self.credentials.password)
+            email_entered = False
+            for selector in email_selectors:
+                try:
+                    element = await page.wait_for_selector(selector, timeout=5000, state="visible")
+                    if element:
+                        await element.fill("")  # Clear field first
+                        await element.fill(self.credentials.email)
+                        self.logger.debug(f"Email entered using selector: {selector}")
+                        email_entered = True
+                        break
+                except Exception:
+                    continue
             
-            # Click login button
-            login_button = "[type='submit']"
-            await page.click(login_button)
+            if not email_entered:
+                raise AuthenticationError("Could not find email input field")
+            
+            # Try multiple selectors for password field
+            password_selectors = ["#password", "input[name='session_password']", "[type='password']"]
+            
+            password_entered = False
+            for selector in password_selectors:
+                try:
+                    element = await page.wait_for_selector(selector, timeout=5000, state="visible")
+                    if element:
+                        await element.fill("")  # Clear field first
+                        await element.fill(self.credentials.password)
+                        self.logger.debug(f"Password entered using selector: {selector}")
+                        password_entered = True
+                        break
+                except Exception:
+                    continue
+            
+            if not password_entered:
+                raise AuthenticationError("Could not find password input field")
+            
+            # Wait a bit before clicking submit
+            await asyncio.sleep(0.5)
+            
+            # Try multiple selectors for login button
+            login_selectors = [
+                "[type='submit']",
+                "button[data-litms-control-urn='login-submit']",
+                "button.sign-in-form__submit-button",
+                "button[aria-label='Sign in']"
+            ]
+            
+            login_clicked = False
+            for selector in login_selectors:
+                try:
+                    element = await page.wait_for_selector(selector, timeout=5000, state="visible")
+                    if element:
+                        await element.click()
+                        self.logger.debug(f"Login button clicked using selector: {selector}")
+                        login_clicked = True
+                        break
+                except Exception:
+                    continue
+            
+            if not login_clicked:
+                raise AuthenticationError("Could not find login submit button")
             
             # Wait for navigation or error
             await page.wait_for_load_state("networkidle", timeout=self.settings.scraping.timeout * 1000)
@@ -110,6 +161,7 @@ class AuthenticationHandler:
             self.logger.debug("Credentials entered successfully")
             
         except Exception as e:
+            self.logger.error(f"Failed to enter credentials: {e}")
             raise AuthenticationError(f"Failed to enter credentials: {e}")
     
     async def _is_2fa_required(self, page: Page) -> bool:
