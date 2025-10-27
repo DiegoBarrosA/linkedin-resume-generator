@@ -190,9 +190,34 @@ class AuthenticationHandler:
             # Wait a moment for any redirects
             await asyncio.sleep(3)
             
-            # Check current URL
+            # Check current URL and log it for debugging
             current_url = page.url
+            self.logger.debug(f"Current URL after login attempt: {current_url}")
+            
+            # Check for specific error messages
+            error_selectors = [
+                "div[role='alert']",
+                ".alert",
+                ".alert--error",
+                "[data-error]"
+            ]
+            
+            for selector in error_selectors:
+                element = await page.query_selector(selector)
+                if element:
+                    error_text = await element.text_content()
+                    if error_text:
+                        self.logger.warning(f"Error message found: {error_text}")
+            
             if "login" in current_url or "challenge" in current_url:
+                self.logger.debug(f"Still on login/challenge page: {current_url}")
+                # Try to get page content to see what's happening
+                try:
+                    body_text = await page.text_content("body")
+                    if body_text:
+                        self.logger.debug(f"Page content preview: {body_text[:200]}")
+                except Exception:
+                    pass
                 return False
             
             # Look for elements that indicate successful login
@@ -206,10 +231,17 @@ class AuthenticationHandler:
             for selector in success_indicators:
                 try:
                     await page.wait_for_selector(selector, timeout=self.settings.scraping.timeout * 1000)
+                    self.logger.debug(f"Found success indicator: {selector}")
                     return True
                 except Exception:
                     continue
             
+            # If we're on feed or profile page, consider it success
+            if "linkedin.com/feed" in current_url or "linkedin.com/in/" in current_url:
+                self.logger.debug(f"On feed/profile page, considering login successful")
+                return True
+            
+            self.logger.warning(f"Could not verify login success. URL: {current_url}")
             return False
             
         except Exception as e:
