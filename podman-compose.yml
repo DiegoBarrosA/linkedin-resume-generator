@@ -1,0 +1,14 @@
+version: '3.8'
+services:
+  resume-generator:
+    build:
+      context: .
+      dockerfile: Containerfile
+    image: linkedin-resume-generator:latest
+    container_name: resume-generator
+    working_dir: /app
+    volumes:
+      - .:/app:Z
+    environment:
+      - PYTHONUNBUFFERED=1
+    command: ["pytest", "tests/unit"]
