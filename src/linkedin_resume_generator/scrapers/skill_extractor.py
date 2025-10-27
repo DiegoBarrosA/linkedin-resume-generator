@@ -1,7 +1,7 @@
 """Skill extraction logic for LinkedIn profiles."""
 
 import re
-from typing import List, Set, Dict, Any
+from typing import List, Set, Dict, Any, Optional
 from urllib.parse import urlparse
 from playwright.async_api import Page, ElementHandle
 
@@ -108,21 +108,28 @@ class SkillExtractor:
             # Navigate to profile if not already there
             await self._ensure_profile_page(page)
             
-            # Method 1: Extract from skills section
+            # Method 1: Navigate to skills details page for complete skills list
+            skills_details_skills = await self._extract_from_skills_details_page(page)
+            for skill in skills_details_skills:
+                if skill.name.lower() not in extracted_names:
+                    skills.append(skill)
+                    extracted_names.add(skill.name.lower())
+            
+            # Method 2: Extract from skills section on main page (fallback)
             skills_section_skills = await self._extract_from_skills_section(page)
             for skill in skills_section_skills:
                 if skill.name.lower() not in extracted_names:
                     skills.append(skill)
                     extracted_names.add(skill.name.lower())
             
-            # Method 2: Extract from experience descriptions
+            # Method 3: Extract from experience descriptions
             experience_skills = await self._extract_from_experience(page)
             for skill in experience_skills:
                 if skill.name.lower() not in extracted_names:
                     skills.append(skill)
                     extracted_names.add(skill.name.lower())
             
-            # Method 3: Extract from headline
+            # Method 4: Extract from headline
             headline_skills = await self._extract_from_headline(page)
             for skill in headline_skills:
                 if skill.name.lower() not in extracted_names:
@@ -165,6 +172,102 @@ class SkillExtractor:
             f"Current URL does not point to a valid LinkedIn profile (/in/<slug> pattern). "
             f"Please provide a concrete profile URL. Current URL: {current_url}"
         )
+    
+    async def _extract_from_skills_details_page(self, page: Page) -> List[Skill]:
+        """Extract skills from the skills details page."""
+        skills = []
+        
+        try:
+            # Navigate to skills details page
+            base_url = page.url.split('/in/')[0] if '/in/' in page.url else page.url
+            profile_slug = page.url.split('/in/')[1].split('/')[0] if '/in/' in page.url else 'me'
+            
+            skills_url = f"{base_url}/in/{profile_slug}/details/skills/"
+            
+            self.logger.debug(f"Navigating to skills details page: {skills_url}")
+            await page.goto(skills_url, wait_until="networkidle")
+            await page.wait_for_timeout(2000)
+            
+            # Wait for skills list to load
+            await page.wait_for_selector(
+                ".pvs-list, .pvs-list__paged-list-item",
+                timeout=10000
+            )
+            
+            # Try to expand "Show more" button
+            try:
+                expand_buttons = await page.query_selector_all(
+                    'button[aria-label*="Show more"], button[aria-label*="See more"], '
+                    '.pvs-see-more-container button'
+                )
+                
+                for button in expand_buttons:
+                    await button.click()
+                    await page.wait_for_timeout(1500)
+                    self.logger.debug("Clicked expand button on skills page")
+            except Exception as e:
+                self.logger.debug(f"Could not expand skills section: {e}")
+            
+            # Extract skills using updated selectors
+            skill_elements = await page.query_selector_all(
+                "li.pvs-list__paged-list-item, li.pvs-entity"
+            )
+            
+            self.logger.debug(f"Found {len(skill_elements)} skill items on details page")
+            
+            for element in skill_elements:
+                skill = await self._extract_skill_from_details_element(element)
+                if skill:
+                    skills.append(skill)
+            
+            self.logger.debug(f"Extracted {len(skills)} skills from details page")
+            
+        except Exception as e:
+            self.logger.warning(f"Error extracting from skills details page: {e}")
+        
+        return skills
+    
+    async def _extract_skill_from_details_element(self, element: ElementHandle) -> Optional[Skill]:
+        """Extract skill from a details page element."""
+        try:
+            # Extract skill name from t-bold span
+            name_elements = await element.query_selector_all(
+                ".t-bold span[aria-hidden='true'], h3.t-bold span"
+            )
+            
+            skill_name = None
+            for elem in name_elements:
+                text = await elem.text_content() if elem else ""
+                if text and text.strip():
+                    skill_name = text.strip()
+                    break
+            
+            if not skill_name:
+                return None
+            
+            # Extract endorsement count
+            endorsement_text = await element.text_content()
+            endorsements = 0
+            if endorsement_text:
+                # Look for patterns like "50 endorsements" or "50+"
+                match = re.search(r'(\d+)\s*\+?', endorsement_text)
+                if match:
+                    endorsements = int(match.group(1))
+            
+            # Categorize skill
+            category = self._categorize_skill(skill_name)
+            
+            return Skill(
+                name=skill_name,
+                category=category,
+                endorsements=endorsements,
+                source="skills_details_page",
+                confidence=1.0
+            )
+            
+        except Exception as e:
+            self.logger.debug(f"Error extracting skill from details element: {e}")
+            return None
     
     async def _extract_from_skills_section(self, page: Page) -> List[Skill]:
         """Extract skills from the dedicated skills section."""

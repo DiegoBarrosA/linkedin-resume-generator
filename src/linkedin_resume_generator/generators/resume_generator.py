@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import Optional, Dict, Any
 import json
 from datetime import datetime
+from collections import defaultdict
 
 from ..models.profile import ProfileData
 from ..utils.logging import get_logger
@@ -143,24 +144,61 @@ class ResumeGenerator:
             lines.append(profile_data.summary)
             lines.append("")
         
-        # Experience
+        # Experience - grouped by company
         if profile_data.experience:
             lines.append("## Professional Experience")
+            
+            # Group experiences by company
+            grouped_experiences = defaultdict(list)
+            
             for exp in profile_data.experience:
-                lines.append(f"### {exp.title} at {exp.company}")
-                if exp.location:
-                    lines.append(f"*{exp.location}*")
-                if exp.start_date or exp.end_date:
-                    date_range = f"{exp.start_date or 'Unknown'} - {exp.end_date or 'Present'}"
-                    lines.append(f"*{date_range}*")
-                if exp.description:
-                    lines.append("")
-                    lines.append(exp.description)
-                if exp.skills:
-                    lines.append("")
-                    lines.append("**Skills:**")
-                    for skill in exp.skills:
-                        lines.append(f"- {skill}")
+                grouped_experiences[exp.company].append(exp)
+            
+            # Format: Company name as heading, then list positions
+            for company, positions in grouped_experiences.items():
+                if not company:
+                    continue
+                    
+                # Sort positions by date (newest first)
+                def get_sort_key(pos):
+                    if pos.end_date:
+                        return pos.end_date
+                    elif pos.start_date:
+                        return pos.start_date
+                    return "1900"
+                
+                sorted_positions = sorted(positions, key=get_sort_key, reverse=True)
+                
+                # If only one position at company, use standard format
+                if len(sorted_positions) == 1:
+                    exp = sorted_positions[0]
+                    lines.append(f"### {exp.title} at {exp.company}")
+                    if exp.location:
+                        lines.append(f"*{exp.location}*")
+                    if exp.start_date or exp.end_date:
+                        date_range = f"{exp.start_date or 'Unknown'} - {exp.end_date or 'Present'}"
+                        lines.append(f"*{date_range}*")
+                    if exp.description:
+                        lines.append("")
+                        lines.append(exp.description)
+                    if exp.skills:
+                        lines.append("")
+                        lines.append("**Skills:**")
+                        for skill in exp.skills:
+                            lines.append(f"- {skill}")
+                else:
+                    # Multiple positions at same company
+                    lines.append(f"### {company}")
+                    for pos in sorted_positions:
+                        # Show position title and dates as a sub-item
+                        date_str = f" ({pos.start_date or 'Unknown'} - {pos.end_date or 'Present'})" if pos.start_date or pos.end_date else ""
+                        lines.append(f"- **{pos.title}**{date_str}")
+                    
+                    # Add description from most recent position if available
+                    if sorted_positions and sorted_positions[0].description:
+                        lines.append("")
+                        lines.append(f"*{sorted_positions[0].description}*")
+                
                 lines.append("")
         
         # Skills

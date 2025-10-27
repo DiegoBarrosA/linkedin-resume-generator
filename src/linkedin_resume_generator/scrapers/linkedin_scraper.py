@@ -194,6 +194,90 @@ class LinkedInScraper:
         except Exception as e:
             raise ScrapingError(f"Failed to navigate to profile: {e}")
     
+    async def _navigate_to_details_section(self, section: str) -> None:
+        """Navigate to a specific detail section page.
+        
+        Args:
+            section: Section name (experience, skills, education, certifications)
+        """
+        try:
+            base_url = self.page.url.split('/in/')[0] if '/in/' in self.page.url else self.page.url
+            profile_slug = self.page.url.split('/in/')[1].split('/')[0] if '/in/' in self.page.url else 'me'
+            
+            details_url = f"{base_url}/in/{profile_slug}/details/{section}/"
+            
+            self.logger.debug(f"Navigating to details page: {details_url}")
+            await self.page.goto(details_url, wait_until="networkidle")
+            
+            # Wait for content to load
+            await self.page.wait_for_timeout(2000)
+            
+            self.logger.debug(f"Successfully navigated to {section} details page")
+            
+        except Exception as e:
+            self.logger.warning(f"Failed to navigate to {section} details page: {e}")
+            # Return to main profile if navigation fails
+            if '/details/' in self.page.url:
+                await self._navigate_to_profile()
+    
+    async def _parse_date_range(self, date_text: str) -> tuple[Optional[str], Optional[str]]:
+        """Parse date range text into start_date and end_date.
+        
+        Args:
+            date_text: Raw date string like "Jan 2020 - Present" or "2020 - 2024"
+            
+        Returns:
+            Tuple of (start_date, end_date) or (None, None) if parsing fails
+        """
+        try:
+            if not date_text or not date_text.strip():
+                return None, None
+            
+            date_text = date_text.strip()
+            
+            # Handle various date range formats
+            if " - " in date_text or "–" in date_text or "—" in date_text:
+                # Split on various dash types
+                separator = " - " if " - " in date_text else ("–" if "–" in date_text else "—")
+                parts = date_text.split(separator, 1)
+                
+                start_date = parts[0].strip()
+                end_date = parts[1].strip() if len(parts) > 1 else None
+                
+                # Normalize "Present" or "Current" to None for current positions
+                if end_date and end_date.lower() in ["present", "current", "now"]:
+                    end_date = None
+                
+                return start_date, end_date
+            else:
+                # Single date (likely current position)
+                return date_text, None
+                
+        except Exception as e:
+            self.logger.debug(f"Error parsing date range '{date_text}': {e}")
+            return None, None
+    
+    async def _expand_section(self) -> None:
+        """Expand collapsible sections on the page."""
+        try:
+            # Look for "Show more" or "See more" buttons
+            expand_buttons = await self.page.query_selector_all(
+                'button[aria-label*="Show more"], button[aria-label*="See more"], '
+                '.pvs-see-more-container button, .artdeco-button--secondary'
+            )
+            
+            for button in expand_buttons:
+                try:
+                    await button.click()
+                    await self.page.wait_for_timeout(1500)
+                    self.logger.debug("Clicked expand button")
+                except Exception as e:
+                    self.logger.debug(f"Could not click expand button: {e}")
+                    continue
+                    
+        except Exception as e:
+            self.logger.debug(f"Error expanding section: {e}")
+    
     async def _extract_basic_info(self) -> Dict[str, str]:
         """Extract basic profile information."""
         try:
@@ -292,45 +376,118 @@ class LinkedInScraper:
         return contact_info
     
     async def _extract_experience(self) -> list[Experience]:
-        """Extract work experience."""
+        """Extract work experience with proper company names and position details."""
         experiences = []
         
         try:
-            # Navigate to experience section or find it on page
-            experience_elements = await self.page.query_selector_all(
-                ".pv-entity__position-group-pager, .experience-item, .pvs-entity"
+            # Navigate to experience details page for more complete data
+            await self._navigate_to_details_section("experience")
+            
+            # Wait for the experience list to load
+            await self.page.wait_for_selector(
+                ".pvs-list, .pvs-list__paged-list-item",
+                timeout=self.settings.scraping.timeout * 1000
             )
             
-            for element in experience_elements:
+            self.logger.debug("Starting experience extraction from details page")
+            
+            # Try to expand "Show more" button if it exists
+            await self._expand_section()
+            
+            # Get all experience items (both company containers and positions)
+            experience_items = await self.page.query_selector_all(
+                "li.pvs-list__paged-list-item, li.pvs-entity"
+            )
+            
+            self.logger.debug(f"Found {len(experience_items)} experience items")
+            
+            # Process each experience item
+            for item in experience_items:
                 try:
-                    # Extract title
-                    title_element = await element.query_selector(
-                        ".pv-entity__summary-info h3, .experience-item__title, .mr1.t-bold span"
+                    # Extract company name - try multiple selectors
+                    company_elements = await item.query_selector_all(
+                        ".t-14.t-normal.t-black--light span[aria-hidden='true'], "
+                        ".t-14.t-normal span[aria-hidden='true']"
                     )
-                    title = await title_element.text_content() if title_element else ""
                     
-                    # Extract company
-                    company_element = await element.query_selector(
-                        ".pv-entity__secondary-title, .experience-item__subtitle, .t-14.t-normal span"
-                    )
-                    company = await company_element.text_content() if company_element else ""
+                    company = ""
+                    location = ""
                     
-                    # Extract duration/dates
-                    duration_element = await element.query_selector(
-                        ".pv-entity__bullet-item-v2, .experience-item__duration, .pvs-entity__caption-wrapper"
+                    for elem in company_elements:
+                        text = await elem.text_content() if elem else ""
+                        if text:
+                            text = text.strip()
+                            # Skip "Full-time", "Part-time", etc.
+                            if text.lower() not in ["full-time", "part-time", "contract", "internship"]:
+                                if not company or len(text) > len(company):
+                                    company = text
+                    
+                    # Extract job title - use first span with t-bold
+                    title_elements = await item.query_selector_all(
+                        ".t-bold span[aria-hidden='true'], h3.t-bold span"
                     )
-                    duration = await duration_element.text_content() if duration_element else ""
+                    
+                    title = ""
+                    for elem in title_elements:
+                        text = await elem.text_content() if elem else ""
+                        if text and text.strip():
+                            title = text.strip()
+                            break
+                    
+                    # Extract date range
+                    date_elements = await item.query_selector_all(
+                        ".pvs-entity__caption-wrapper, .t-14.t-normal.t-black--light"
+                    )
+                    
+                    duration = ""
+                    for elem in date_elements:
+                        text = await elem.text_content() if elem else ""
+                        # Look for date patterns
+                        if text and any(indicator in text.lower() for indicator in ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec", "present", "current", "/"]):
+                            if len(text) < 50:  # Filter out descriptions
+                                duration = text.strip()
+                                break
+                    
+                    # Parse dates
+                    start_date, end_date = await self._parse_date_range(duration)
+                    
+                    # Extract location
+                    location_elements = await item.query_selector_all(
+                        ".t-14.t-normal.t-black--light"
+                    )
+                    for elem in location_elements:
+                        text = await elem.text_content() if elem else ""
+                        if text and "," in text and any(char.isdigit() for char in text):
+                            # This looks like a location (city, country)
+                            location = text.strip()
+                            break
                     
                     # Extract description
-                    desc_element = await element.query_selector(
-                        ".pv-entity__description, .experience-item__description"
-                    )
-                    description = await desc_element.text_content() if desc_element else ""
+                    desc_text = await item.text_content()
+                    description = ""
+                    if desc_text and len(desc_text) > len(title) + len(company) + len(duration) + 50:
+                        # Try to extract the description portion
+                        lines = desc_text.split('\n')
+                        description_lines = []
+                        in_description = False
+                        for line in lines:
+                            if line.strip() and line not in [title, company, duration, location] and len(line) > 20:
+                                if "•" in line or "-" in line or line[0].islower():
+                                    description_lines.append(line.strip())
+                        
+                        description = "\n".join(description_lines)
                     
+                    # Only add if we have valid data
                     if title and company:
+                        # Log extracted data for debugging
+                        self.logger.debug(f"Extracted: {title} at {company} ({start_date} - {end_date})")
+                        
                         experiences.append(Experience(
                             title=title.strip(),
-                            company=company.strip(), 
+                            company=company.strip(),
+                            location=location.strip() if location else None,
+                            start_date=start_date,
+                            end_date=end_date,
                             duration=duration.strip(),
                             description=description.strip() if description else None
                         ))
@@ -339,7 +496,7 @@ class LinkedInScraper:
                     self.logger.debug(f"Error extracting experience item: {e}")
                     continue
             
-            self.logger.debug(f"Extracted {len(experiences)} experience items")
+            self.logger.debug(f"Successfully extracted {len(experiences)} experience items")
             
         except Exception as e:
             self.logger.warning(f"Error extracting experience: {e}")
