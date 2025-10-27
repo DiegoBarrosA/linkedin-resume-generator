@@ -39,8 +39,11 @@ class AuthenticationHandler:
             self.logger.info("Starting LinkedIn authentication")
             
             # Navigate to LinkedIn login
+            self.logger.debug(f"Navigating to login page with timeout: {self.settings.scraping.timeout * 1000}ms")
             await page.goto("https://www.linkedin.com/login", timeout=self.settings.scraping.timeout * 1000)
+            self.logger.debug("Waiting for networkidle...")
             await page.wait_for_load_state("networkidle")
+            self.logger.debug("Login page loaded")
             
             # Check if already logged in
             if await self._is_already_logged_in(page):
@@ -113,7 +116,7 @@ class AuthenticationHandler:
             for selector in email_selectors:
                 try:
                     self.logger.debug(f"Trying email selector: {selector}")
-                    element = await page.wait_for_selector(selector, timeout=5000, state="visible")
+                    element = await page.wait_for_selector(selector, timeout=15000, state="visible")
                     if element:
                         # Click to focus
                         await element.click()
@@ -141,7 +144,7 @@ class AuthenticationHandler:
             for selector in password_selectors:
                 try:
                     self.logger.debug(f"Trying password selector: {selector}")
-                    element = await page.wait_for_selector(selector, timeout=5000, state="visible")
+                    element = await page.wait_for_selector(selector, timeout=15000, state="visible")
                     if element:
                         # Click to focus
                         await element.click()
@@ -176,7 +179,7 @@ class AuthenticationHandler:
             for selector in login_selectors:
                 try:
                     self.logger.debug(f"Trying login button selector: {selector}")
-                    element = await page.wait_for_selector(selector, timeout=5000, state="visible")
+                    element = await page.wait_for_selector(selector, timeout=15000, state="visible")
                     if element:
                         await element.click()
                         self.logger.info(f"✅ Login button clicked using selector: {selector}")
