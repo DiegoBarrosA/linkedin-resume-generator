@@ -195,6 +195,8 @@ class LinkedInScraper:
                     
                     if "sessionRedirect" in params:
                         redirect_url = params["sessionRedirect"][0]
+                        # Decode the URL
+                        redirect_url = urllib.parse.unquote(redirect_url)
                         self.logger.info(f"Found session redirect: {redirect_url}")
                         url = redirect_url
                     elif profile_url:
@@ -202,14 +204,26 @@ class LinkedInScraper:
                     else:
                         url = "https://www.linkedin.com/in/me/"
                     
-                    self.logger.info(f"Following redirect to: {url}")
+                    self.logger.info(f"Navigating to: {url}")
+                    # Try navigating and wait for it to fully load
                     await self.page.goto(url, wait_until="domcontentloaded", timeout=30000)
-                    await asyncio.sleep(3)
+                    await asyncio.sleep(5)  # Wait longer for authwall to clear
+                    
+                    # Check if we're still on authwall
+                    new_url = self.page.url
+                    self.logger.debug(f"URL after navigation: {new_url}")
+                    
+                    if "authwall" in new_url:
+                        self.logger.warning("Still on authwall after navigation, waiting more...")
+                        await asyncio.sleep(5)
+                        # Try clicking through if needed
+                        await self.page.wait_for_load_state("networkidle", timeout=10000)
+                        
                 except Exception as e:
                     self.logger.warning(f"Extract redirect failed: {e}, navigating to /in/me/")
                     url = "https://www.linkedin.com/in/me/"
                     await self.page.goto(url, wait_until="domcontentloaded", timeout=30000)
-                    await asyncio.sleep(2)
+                    await asyncio.sleep(3)
             
             # If we're on a login redirect or challenge page, navigate directly to profile
             elif "uas/login" in current_url or "checkpoint" in current_url or "challenge" in current_url:
