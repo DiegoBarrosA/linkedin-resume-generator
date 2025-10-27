@@ -201,25 +201,52 @@ class AuthenticationHandler:
     async def _is_2fa_required(self, page: Page) -> bool:
         """Check if 2FA verification is required."""
         try:
-            await asyncio.sleep(2)  # Wait for potential redirect
+            await asyncio.sleep(3)  # Wait for potential redirect or challenge
+            
+            current_url = page.url
+            self.logger.debug(f"Checking for 2FA. Current URL: {current_url}")
+            
+            # Check URL for challenge indicators
+            if "challenge" in current_url or "verify" in current_url:
+                self.logger.info("Challenge detected in URL")
+                return True
             
             # Look for 2FA challenge elements
-            selectors = [
+            challenge_selectors = [
                 "input[name='pin']",
+                "input[id='input__phone_verification_pin']",
                 "[data-test-id='challenge-form']",
                 ".challenge-form",
-                "input[placeholder*='verification']"
+                "input[placeholder*='verification']",
+                "input[placeholder*='PIN']",
+                "input[placeholder*='code']"
             ]
             
-            for selector in selectors:
+            for selector in challenge_selectors:
                 element = await page.query_selector(selector)
                 if element:
-                    self.logger.debug("2FA challenge detected")
+                    self.logger.info(f"2FA challenge detected with selector: {selector}")
                     return True
             
+            # Check for generic challenge indicators
+            challenge_indicators = [
+                ".challenge-prompt",
+                "[data-validation-id='challenge-form']",
+                "span:has-text('Enter code')",
+                "div:has-text('verification code')"
+            ]
+            
+            for selector in challenge_indicators:
+                element = await page.query_selector(selector)
+                if element:
+                    self.logger.info("Challenge prompt detected")
+                    return True
+            
+            self.logger.debug("No 2FA challenge detected")
             return False
             
-        except Exception:
+        except Exception as e:
+            self.logger.debug(f"Error checking 2FA: {e}")
             return False
     
     async def _handle_2fa(self, page: Page) -> None:
@@ -273,38 +300,52 @@ class AuthenticationHandler:
     async def _verify_login_success(self, page: Page) -> bool:
         """Verify that login was successful."""
         try:
-            # Wait a moment for any redirects
-            await asyncio.sleep(3)
+            # Wait longer for redirects and page loads
+            self.logger.debug("Waiting for login to complete...")
+            await asyncio.sleep(5)  # Increased wait time
+            
+            # Try waiting for network to be idle
+            try:
+                await page.wait_for_load_state("networkidle", timeout=10000)
+            except Exception:
+                self.logger.debug("Page did not reach networkidle")
             
             # Check current URL and log it for debugging
             current_url = page.url
-            self.logger.debug(f"Current URL after login attempt: {current_url}")
+            self.logger.info(f"Current URL after login attempt: {current_url}")
             
             # Check for specific error messages
             error_selectors = [
                 "div[role='alert']",
                 ".alert",
                 ".alert--error",
-                "[data-error]"
+                "[data-error]",
+                ".error-for-password",
+                "#error-for-password"
             ]
             
             for selector in error_selectors:
                 element = await page.query_selector(selector)
                 if element:
                     error_text = await element.text_content()
-                    if error_text:
+                    if error_text and error_text.strip():
                         self.logger.warning(f"Error message found: {error_text}")
             
-            if "login" in current_url or "challenge" in current_url:
-                self.logger.debug(f"Still on login/challenge page: {current_url}")
-                # Try to get page content to see what's happening
-                try:
-                    body_text = await page.text_content("body")
-                    if body_text:
-                        self.logger.debug(f"Page content preview: {body_text[:200]}")
-                except Exception:
-                    pass
-                return False
+            # Check if we need to handle a challenge
+            if "login" in current_url:
+                # Check if there's a challenge form visible
+                challenge_check = await self._is_2fa_required(page)
+                if challenge_check:
+                    self.logger.info("Challenge detected, returning True to let 2FA handler deal with it")
+                    return True  # Let the 2FA handler deal with it
+                else:
+                    self.logger.warning(f"Still on login page after 5 seconds: {current_url}")
+                    return False
+            
+            if "challenge" in current_url or "verify" in current_url:
+                self.logger.info(f"On challenge page: {current_url}")
+                # This is actually OK, it means we need 2FA
+                return True
             
             # Look for elements that indicate successful login
             success_indicators = [
@@ -316,15 +357,15 @@ class AuthenticationHandler:
             
             for selector in success_indicators:
                 try:
-                    await page.wait_for_selector(selector, timeout=self.settings.scraping.timeout * 1000)
-                    self.logger.debug(f"Found success indicator: {selector}")
+                    await page.wait_for_selector(selector, timeout=10000)
+                    self.logger.info(f"✅ Login verified successfully with selector: {selector}")
                     return True
                 except Exception:
                     continue
             
             # If we're on feed or profile page, consider it success
             if "linkedin.com/feed" in current_url or "linkedin.com/in/" in current_url:
-                self.logger.debug(f"On feed/profile page, considering login successful")
+                self.logger.info(f"✅ On feed/profile page, login successful")
                 return True
             
             self.logger.warning(f"Could not verify login success. URL: {current_url}")

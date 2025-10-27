@@ -146,6 +146,10 @@ class Settings(BaseSettings):
 
 def get_settings() -> Settings:
     """Get application settings with proper credential handling."""
+    # Load .env file explicitly since BaseSettings might not do it automatically
+    from dotenv import load_dotenv
+    load_dotenv()
+    
     # Create settings from BaseSettings (reads .env file automatically)
     settings = Settings()
     
