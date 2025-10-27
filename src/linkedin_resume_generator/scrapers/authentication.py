@@ -91,65 +91,99 @@ class AuthenticationHandler:
     async def _enter_credentials(self, page: Page) -> None:
         """Enter email and password."""
         try:
+            # Log what we're trying to enter (partially masked for security)
+            masked_email = self.credentials.email[:3] + "***" + self.credentials.email[-3:] if len(self.credentials.email) > 6 else "***"
+            self.logger.debug(f"Attempting to enter email: {masked_email}")
+            
+            if not self.credentials.email:
+                raise AuthenticationError("Email is empty - credentials not loaded")
+            
+            # Take a screenshot for debugging if enabled
+            if self.settings.debug:
+                try:
+                    await page.screenshot(path="login_form.png")
+                    self.logger.debug("Screenshot saved to login_form.png")
+                except Exception as e:
+                    self.logger.debug(f"Could not take screenshot: {e}")
+            
             # Try multiple selectors for email field (LinkedIn may use different ones)
-            email_selectors = ["#username", "input[name='session_key']", "[type='text']"]
+            email_selectors = ["#username", "input[name='session_key']", "input[id='username']"]
             
             email_entered = False
             for selector in email_selectors:
                 try:
+                    self.logger.debug(f"Trying email selector: {selector}")
                     element = await page.wait_for_selector(selector, timeout=5000, state="visible")
                     if element:
-                        await element.fill("")  # Clear field first
-                        await element.fill(self.credentials.email)
-                        self.logger.debug(f"Email entered using selector: {selector}")
+                        # Click to focus
+                        await element.click()
+                        await asyncio.sleep(0.2)
+                        
+                        # Type email character by character (more reliable than fill())
+                        await element.type(self.credentials.email, delay=50)
+                        self.logger.info(f"✅ Email entered using selector: {selector}")
                         email_entered = True
                         break
-                except Exception:
+                except Exception as e:
+                    self.logger.debug(f"Selector {selector} failed: {e}")
                     continue
             
             if not email_entered:
-                raise AuthenticationError("Could not find email input field")
+                # Log page HTML for debugging
+                page_content = await page.content()
+                self.logger.debug(f"Page HTML sample: {page_content[:500]}")
+                raise AuthenticationError("Could not find email input field with any selector")
             
             # Try multiple selectors for password field
-            password_selectors = ["#password", "input[name='session_password']", "[type='password']"]
+            password_selectors = ["#password", "input[name='session_password']", "input[id='password']"]
             
             password_entered = False
             for selector in password_selectors:
                 try:
+                    self.logger.debug(f"Trying password selector: {selector}")
                     element = await page.wait_for_selector(selector, timeout=5000, state="visible")
                     if element:
-                        await element.fill("")  # Clear field first
-                        await element.fill(self.credentials.password)
-                        self.logger.debug(f"Password entered using selector: {selector}")
+                        # Click to focus
+                        await element.click()
+                        await asyncio.sleep(0.2)
+                        
+                        # Type password character by character
+                        await element.type(self.credentials.password, delay=50)
+                        self.logger.info(f"✅ Password entered using selector: {selector}")
                         password_entered = True
                         break
-                except Exception:
+                except Exception as e:
+                    self.logger.debug(f"Selector {selector} failed: {e}")
                     continue
             
             if not password_entered:
                 raise AuthenticationError("Could not find password input field")
             
             # Wait a bit before clicking submit
-            await asyncio.sleep(0.5)
+            await asyncio.sleep(1)
             
             # Try multiple selectors for login button
             login_selectors = [
                 "[type='submit']",
                 "button[data-litms-control-urn='login-submit']",
                 "button.sign-in-form__submit-button",
-                "button[aria-label='Sign in']"
+                "button[aria-label='Sign in']",
+                "button.sign-in-form__submit-btn",
+                "input[type='submit']"
             ]
             
             login_clicked = False
             for selector in login_selectors:
                 try:
+                    self.logger.debug(f"Trying login button selector: {selector}")
                     element = await page.wait_for_selector(selector, timeout=5000, state="visible")
                     if element:
                         await element.click()
-                        self.logger.debug(f"Login button clicked using selector: {selector}")
+                        self.logger.info(f"✅ Login button clicked using selector: {selector}")
                         login_clicked = True
                         break
-                except Exception:
+                except Exception as e:
+                    self.logger.debug(f"Selector {selector} failed: {e}")
                     continue
             
             if not login_clicked:
