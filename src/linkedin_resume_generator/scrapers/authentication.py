@@ -260,6 +260,19 @@ class AuthenticationHandler:
             self.logger.info(f"Handling challenge on: {current_url}")
             self.logger.info(f"Page title: {page_title}")
             
+            # Check if this is a Security Verification (CAPTCHA) page
+            if "Security Verification" in page_title:
+                self.logger.warning("Security Verification page detected - likely CAPTCHA or device verification")
+                self.logger.warning("This may require manual intervention. Waiting 30s for auto-redirect...")
+                # Wait for page to potentially resolve automatically
+                try:
+                    await page.wait_for_url("**/in/**", timeout=30000)
+                    self.logger.info("Redirected after security verification")
+                    return
+                except Exception:
+                    self.logger.error("Security verification did not auto-resolve")
+                    raise TwoFactorAuthError("Security Verification page requires manual intervention - please disable CAPTCHA or use trusted device")
+            
             # Wait for the page to fully load
             await asyncio.sleep(2)
             
