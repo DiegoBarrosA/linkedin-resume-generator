@@ -72,9 +72,25 @@ class LinkedInScraper:
             await asyncio.sleep(2)
             final_url = self.page.url
             if "authwall" in final_url:
-                self.logger.warning(f"Still on authwall: {final_url}, forcing navigation to profile...")
-                await self.page.goto("https://www.linkedin.com/in/me/", wait_until="domcontentloaded", timeout=30000)
-                await asyncio.sleep(5)
+                self.logger.warning(f"Still on authwall: {final_url}, attempting to extract redirect...")
+                
+                # Try to find and click continue button
+                try:
+                    continue_btn = await self.page.query_selector("button, a[href*='/in/me']")
+                    if continue_btn and await continue_btn.is_visible():
+                        self.logger.info("Found continue button, clicking...")
+                        await continue_btn.click()
+                        await asyncio.sleep(5)
+                except Exception as e:
+                    self.logger.debug(f"Could not click button: {e}")
+                
+                # Wait for redirect
+                try:
+                    await self.page.wait_for_url("**/in/**", timeout=10000)
+                except Exception:
+                    self.logger.warning("URL did not change after clicking, forcing navigation...")
+                    await self.page.goto("https://www.linkedin.com/in/me/", wait_until="domcontentloaded", timeout=60000)
+                    await asyncio.sleep(5)
             
             # Log current URL before extracting
             self.logger.info(f"Starting data extraction from: {self.page.url}")
