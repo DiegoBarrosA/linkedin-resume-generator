@@ -19,7 +19,7 @@ class LinkedInCredentials(BaseModel):
 class ScrapingConfig(BaseModel):
     """Configuration for scraping behavior."""
     
-    timeout: int = Field(default=30, description="Page timeout in seconds")
+    timeout: int = Field(default=60, description="Page timeout in seconds")
     retry_attempts: int = Field(default=3, description="Number of retry attempts")
     retry_delay: float = Field(default=1.0, description="Delay between retries in seconds")
     headless: bool = Field(default=os.getenv("LINKEDIN_HEADLESS", "true").lower() == "true", description="Run browser in headless mode")
@@ -29,7 +29,7 @@ class ScrapingConfig(BaseModel):
     @classmethod
     def validate_timeout(cls, v):
         if v < 5 or v > 300:
-            raise ValueError("Timeout must be between 5 and 300 seconds")
+            raise ValueError("Timeout must be between 5 and 600 seconds")
         return v
 
 
